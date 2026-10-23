@@ -6,17 +6,29 @@ FileMorph is a local-first Windows app for file conversion and utility operation
 
 ## Solution boundaries
 
-- App (C# / WPF): presentation, navigation, user commands, and Soft Tech visual design.
+- App (C# / WPF): presentation, user commands, built-in image handler via Windows Imaging Component (WIC), and Soft Tech visual design.
 - Core: domain models, job states, handler capabilities, and contracts. No dependency on WPF or specific engines.
 - Infrastructure: external CLI process execution, filesystem adapters, handler registration, and infrastructure services.
 - Core.Tests: fast unit tests for domain rules.
 - Windows shell integration should be a separate component after a technical prototype; keep COM code out of the UI layer.
 
-Use a modular monolith, not microservices. Conversion engines run as separate processes to isolate crashes and support cancellation.
+Use a modular monolith, not microservices. External conversion engines run as separate processes to isolate crashes and support cancellation; the initial WIC handler uses the system component in-process.
 
 ## Handler contract
 
 Each handler declares its identifier, supported input/output extensions, and operations. The app checks capabilities before execution and explains unavailable actions. A file extension is a hint, not proof of file content.
+
+## First vertical slice
+
+Basic PNG, JPEG, BMP, TIFF, and GIF conversion is implemented through WIC:
+1. The user selects a file through the file picker or drag-and-drop.
+2. The user chooses an output format.
+3. The app chooses an unused destination name beside the source.
+4. The image is encoded into a temporary file in the destination directory.
+5. The output is published by moving the temporary file without allowing overwrite.
+6. The UI reports progress and the result path or an error.
+
+Current limitation: animated images are reduced to the first frame. AVIF, HEIC, and WebP require a separate engine. Integration tests for the WIC handler still need to be added.
 
 ## Job lifecycle
 
@@ -24,7 +36,7 @@ Each handler declares its identifier, supported input/output extensions, and ope
 2. Choose a destination path, next to the source by default.
 3. Never overwrite the source or silently replace an existing output.
 4. Create a unique temporary output in a controlled directory.
-5. Launch the engine using ProcessStartInfo.ArgumentList, without shell interpretation.
+5. Launch external engines using ProcessStartInfo.ArgumentList, without shell interpretation.
 6. Support cancellation, bounded output capture, and exit-code handling.
 7. Verify that the output exists and passes basic validation.
 8. Move the result to its destination, atomically where possible.
