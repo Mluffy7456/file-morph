@@ -41,6 +41,9 @@ public partial class MainWindow : Window
 
     private void DropZone_OnDrop(object sender, DragEventArgs e)
     {
+        if (_isConverting)
+            return;
+
         if (e.Data.GetData(DataFormats.FileDrop) is string[] { Length: > 0 } files)
         {
             var firstFile = files.FirstOrDefault(File.Exists);
@@ -113,6 +116,9 @@ public partial class MainWindow : Window
     private void SetControlsEnabled(bool enabled)
     {
         OutputFormatComboBox.IsEnabled = enabled;
+        SelectFileButton.IsEnabled = enabled;
+        ConvertButton.IsEnabled = enabled;
+        DropZoneBorder.AllowDrop = enabled;
     }
 
     private void SetSelectedFile(string path)
