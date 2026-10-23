@@ -6,13 +6,13 @@ FileMorph is a local-first file converter for Windows. Conversion must not requi
 
 ## Status
 
-Early Alpha foundation. This commit establishes the solution structure, core contracts, external-process boundary, initial WPF shell, unit tests, and Windows CI. Production format handlers and conversion workflows are not implemented yet.
+Early Alpha. The first end-to-end conversion slice is implemented for common raster images using Windows Imaging Component (WIC) through WPF: PNG, JPEG, BMP, TIFF and GIF. The UI supports file picking, drag-and-drop, output format selection, progress feedback, and saving a separate output next to the source. Animated inputs are currently reduced to their first frame. AVIF, HEIC, WebP, batch queue, history, presets and Explorer integration are not implemented yet.
 
 ## Structure
 
-- src/FileMorph.App — WPF desktop UI
+- src/FileMorph.App — WPF desktop UI and built-in WIC image handler
 - src/FileMorph.Core — domain models and contracts
-- src/FileMorph.Infrastructure — external-engine process execution and adapters
+- src/FileMorph.Infrastructure — external-engine process execution and conversion orchestration
 - tests/FileMorph.Core.Tests — core unit tests
 - docs/ARCHITECTURE.md and docs/ARCHITECTURE.en.md — architecture docs
 
@@ -27,9 +27,10 @@ Install the .NET 10 SDK and a compatible Visual Studio installation with the .NE
 
 ## Principles
 
-- Never overwrite source files.
+- Never overwrite source files or silently replace existing output files.
 - Keep processing local; no telemetry.
-- Launch engines without a shell and pass arguments safely.
+- Launch external engines without a shell and pass arguments safely.
 - Keep the UI responsive and report failures explicitly.
 - Declare handler capabilities rather than assuming every format pair is supported.
+- Use temporary output and only publish the final file after successful encoding.
 - Audit bundled engine licenses before distributing binaries.
