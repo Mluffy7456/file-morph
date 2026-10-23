@@ -20,4 +20,20 @@ public sealed class FormatCapabilitiesTests
     {
         Assert.Throws<ArgumentException>(() => new FormatCapabilities("handler", ["png"], ["webp"], []));
     }
+
+    [Fact]
+    public void Constructor_IgnoresBlankExtensionsWhenOtherExtensionsAreProvided()
+    {
+        var capabilities = new FormatCapabilities("handler", ["", " ", "png"], ["webp"], [ConversionOperation.Convert]);
+
+        Assert.Single(capabilities.InputExtensions);
+        Assert.True(capabilities.SupportsInput("png"));
+    }
+
+    [Fact]
+    public void Constructor_RejectsInputExtensionsThatAreAllBlank()
+    {
+        Assert.Throws<ArgumentException>(() =>
+            new FormatCapabilities("handler", ["", " "], ["webp"], [ConversionOperation.Convert]));
+    }
 }
