@@ -36,8 +36,8 @@ public sealed record FormatCapabilities
     public bool Supports(ConversionOperation operation) => Operations.Contains(operation);
 
     private static ImmutableHashSet<string> NormalizeExtensions(IEnumerable<string> extensions) =>
-        extensions.Select(NormalizeExtension)
-            .Where(extension => extension.Length > 0)
+        extensions.Where(extension => !string.IsNullOrWhiteSpace(extension))
+            .Select(NormalizeExtension)
             .ToImmutableHashSet(StringComparer.OrdinalIgnoreCase);
 
     private static string NormalizeExtension(string extension)
