@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>FileMorph.Infrastructure</RootNamespace>
+    <AssemblyName>FileMorph.Infrastructure</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../FileMorph.Core/FileMorph.Core.csproj" />
+  </ItemGroup>
+</Project>
