@@ -56,7 +56,7 @@
                     <TextBlock Margin="0,6,0,0" Foreground="{StaticResource SecondaryTextBrush}"
                                Text="Выберите изображение и формат результата. Исходник останется без изменений." />
                 </StackPanel>
-                <Border Grid.Row="1" Margin="0,22,0,22" BorderBrush="#FF484B52"
+                <Border x:Name="DropZoneBorder" Grid.Row="1" Margin="0,22,0,22" BorderBrush="#FF484B52"
                         BorderThickness="1" CornerRadius="14" Background="#FF151619"
                         AllowDrop="True" DragOver="DropZone_OnDragOver" Drop="DropZone_OnDrop">
                     <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
@@ -64,7 +64,7 @@
                         <TextBlock Margin="0,10,0,0" FontSize="16" FontWeight="Medium" Text="Перетащите изображение сюда" />
                         <TextBlock Margin="0,7,0,0" Foreground="{StaticResource SecondaryTextBrush}"
                                    Text="или выберите его на компьютере" />
-                        <Button Margin="0,18,0,0" Content="Выбрать файл…" Click="SelectFile_OnClick" />
+                        <Button x:Name="SelectFileButton" Margin="0,18,0,0" Content="Выбрать файл…" Click="SelectFile_OnClick" />
                     </StackPanel>
                 </Border>
                 <Grid Grid.Row="2">
@@ -95,7 +95,7 @@
                             <ComboBoxItem Content="GIF" Tag="gif" />
                         </ComboBox>
                     </StackPanel>
-                    <Button Grid.Row="0" Grid.Column="2" MinWidth="170" VerticalAlignment="Bottom"
+                    <Button x:Name="ConvertButton" Grid.Row="0" Grid.Column="2" MinWidth="170" VerticalAlignment="Bottom"
                             Content="Конвертировать" Click="Convert_OnClick" />
                     <TextBlock x:Name="ConversionStatusText" Grid.Row="1" Grid.ColumnSpan="3"
                                Margin="0,14,0,0" Foreground="{StaticResource SecondaryTextBrush}"
