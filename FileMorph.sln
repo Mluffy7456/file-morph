@@ -1,0 +1,28 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FileMorph.Core", "src\FileMorph.Core\FileMorph.Core.csproj", "{1D1B41E1-8B30-4F44-A1B7-19F040DCD101}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FileMorph.Infrastructure", "src\FileMorph.Infrastructure\FileMorph.Infrastructure.csproj", "{1D1B41E1-8B30-4F44-A1B7-19F040DCD102}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FileMorph.App", "src\FileMorph.App\FileMorph.App.csproj", "{1D1B41E1-8B30-4F44-A1B7-19F040DCD103}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FileMorph.Core.Tests", "tests\FileMorph.Core.Tests\FileMorph.Core.Tests.csproj", "{1D1B41E1-8B30-4F44-A1B7-19F040DCD104}"
+EndProject
+Global
+  GlobalSection(SolutionConfigurationPlatforms) = preSolution
+    Debug|Any CPU = Debug|Any CPU
+    Release|Any CPU = Release|Any CPU
+  EndGlobalSection
+  GlobalSection(ProjectConfigurationPlatforms) = postSolution
+    {1D1B41E1-8B30-4F44-A1B7-19F040DCD101}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+    {1D1B41E1-8B30-4F44-A1B7-19F040DCD101}.Debug|Any CPU.Build.0 = Debug|Any CPU
+    {1D1B41E1-8B30-4F44-A1B7-19F040DCD102}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+    {1D1B41E1-8B30-4F44-A1B7-19F040DCD102}.Debug|Any CPU.Build.0 = Release|Any CPU
+    {1D1B41E1-8B30-4F44-A1B7-19F040DCD103}.Debug|Any CPU.ActiveCfg = Release|Any CPU
+    {1D1B41E1-8B30-4F44-A1B7-19F040DCD103}.Release|Any CPU.Build.0 = Release|Any CPU
+    {1D1B41E1-8B30-4F44-A1B7-19F040DCD104}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+    {1D1B41E1-8B30-4F44-A1B7-19F040DCD104}.Debug|Any CPU.Build.0 = Debug|Any CPU
+  EndGlobalSection
+EndGlobal
