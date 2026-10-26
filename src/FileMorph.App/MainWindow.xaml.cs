@@ -2,10 +2,10 @@ using FileMorph.App.Conversion;
 using FileMorph.Core.Models;
 using FileMorph.Infrastructure.Conversion;
 using Microsoft.Win32;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
-using System.Collections.ObjectModel;
 
 namespace FileMorph.App;
 
@@ -17,6 +17,7 @@ public partial class MainWindow : Window
     private CancellationTokenSource? _queueRunCancellation;
     private string? _selectedFilePath;
     private bool _isConverting;
+    private bool _isQueueRunning;
 
     public MainWindow()
     {
@@ -48,7 +49,7 @@ public partial class MainWindow : Window
 
     private void DropZone_OnDrop(object sender, DragEventArgs e)
     {
-        if (_isConverting)
+        if (_isConverting || _isQueueRunning)
             return;
 
         if (e.Data.GetData(DataFormats.FileDrop) is string[] { Length: > 0 } files)
@@ -61,7 +62,7 @@ public partial class MainWindow : Window
 
     private async void Convert_OnClick(object sender, RoutedEventArgs e)
     {
-        if (_isConverting || string.IsNullOrWhiteSpace(_selectedFilePath))
+        if (_isConverting || _isQueueRunning || string.IsNullOrWhiteSpace(_selectedFilePath))
             return;
 
         if (OutputFormatComboBox.SelectedItem is not ComboBoxItem { Tag: string outputFormat })
@@ -103,6 +104,102 @@ public partial class MainWindow : Window
         }
     }
 
+    private void AddToQueue_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (_isConverting || _isQueueRunning || string.IsNullOrWhiteSpace(_selectedFilePath))
+            return;
+
+        if (OutputFormatComboBox.SelectedItem is not ComboBoxItem { Tag: string outputFormat })
+            return;
+
+        try
+        {
+            var queuedPaths = _queueService.GetItems()
+                .Where(item => item.Status is ConversionQueueStatus.Queued or ConversionQueueStatus.Running)
+                .Select(item => item.Request.DestinationPath);
+            var destinationPath = GetAvailableDestinationPath(_selectedFilePath, outputFormat, queuedPaths);
+            _queueService.Enqueue(new ConversionRequest(
+                _selectedFilePath, destinationPath, ConversionOperation.Convert, outputFormat));
+            RunQueueButton.IsEnabled = true;
+            ConversionStatusText.Text = "Файл добавлен в очередь.";
+        }
+        catch (Exception exception)
+        {
+            ConversionStatusText.Text = $"Не удалось добавить файл: {exception.Message}";
+        }
+    }
+
+    private async void RunQueue_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (_isQueueRunning || _isConverting ||
+            !_queueService.GetItems().Any(item => item.Status == ConversionQueueStatus.Queued))
+            return;
+
+        _isQueueRunning = true;
+        _queueRunCancellation = new CancellationTokenSource();
+        RunQueueButton.IsEnabled = false;
+        AddToQueueButton.IsEnabled = false;
+        CancelQueueButton.IsEnabled = true;
+        SetControlsEnabled(false);
+        ConversionStatusText.Text = "Выполняется очередь конвертации…";
+
+        try
+        {
+            await _queueService.RunAsync(_queueRunCancellation.Token);
+            ConversionStatusText.Text = "Обработка очереди завершена.";
+        }
+        catch (OperationCanceledException)
+        {
+            ConversionStatusText.Text = "Очередь остановлена. Необработанные задания сохранены в списке.";
+        }
+        catch (Exception exception)
+        {
+            ConversionStatusText.Text = $"Ошибка очереди: {exception.Message}";
+        }
+        finally
+        {
+            _queueRunCancellation.Dispose();
+            _queueRunCancellation = null;
+            _isQueueRunning = false;
+            CancelQueueButton.IsEnabled = false;
+            AddToQueueButton.IsEnabled = true;
+            SetControlsEnabled(true);
+            RunQueueButton.IsEnabled = _queueService.GetItems()
+                .Any(item => item.Status == ConversionQueueStatus.Queued);
+        }
+    }
+
+    private void CancelQueue_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (!_isQueueRunning)
+            return;
+
+        _queueService.CancelCurrent();
+        _queueRunCancellation?.Cancel();
+        CancelQueueButton.IsEnabled = false;
+        ConversionStatusText.Text = "Останавливаем текущую операцию…";
+    }
+
+    private void QueueService_OnItemChanged(ConversionQueueItem item)
+    {
+        Dispatcher.Invoke(() =>
+        {
+            var existing = _queueItems.FirstOrDefault(entry => entry.Id == item.Id);
+            var updated = new QueueDisplayItem(item);
+            if (existing is null)
+                _queueItems.Add(updated);
+            else
+            {
+                var index = _queueItems.IndexOf(existing);
+                _queueItems[index] = updated;
+            }
+
+            if (!_isQueueRunning)
+                RunQueueButton.IsEnabled = _queueService.GetItems()
+                    .Any(entry => entry.Status == ConversionQueueStatus.Queued);
+        });
+    }
+
     private static string GetAvailableDestinationPath(
         string sourcePath,
         string outputFormat,
@@ -133,6 +230,14 @@ public partial class MainWindow : Window
         DropZoneBorder.AllowDrop = enabled;
     }
 
+    private void SetSelectedFile(string path)
+    {
+        _selectedFilePath = path;
+        SelectedFileText.Text = path;
+        SelectedFileText.ToolTip = path;
+        ConversionStatusText.Text = "Готово к конвертации. Результат будет сохранён рядом с исходным файлом.";
+    }
+
     private sealed class QueueDisplayItem(ConversionQueueItem item)
     {
         public Guid Id { get; } = item.Id;
@@ -151,13 +256,5 @@ public partial class MainWindow : Window
             };
             return $"{Path.GetFileName(item.Request.SourcePath)} → {item.Request.OutputFormat.ToUpperInvariant()} · {state}";
         }
-    }
-
-    private void SetSelectedFile(string path)
-    {
-        _selectedFilePath = path;
-        SelectedFileText.Text = path;
-        SelectedFileText.ToolTip = path;
-        ConversionStatusText.Text = "Готово к конвертации. Результат будет сохранён рядом с исходным файлом.";
     }
 }
