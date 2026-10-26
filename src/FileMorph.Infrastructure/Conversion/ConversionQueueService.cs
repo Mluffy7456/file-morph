@@ -14,7 +14,7 @@ public sealed class ConversionQueueService(IConversionService conversionService)
     private readonly SemaphoreSlim _runnerLock = new(1, 1);
     private CancellationTokenSource? _currentCancellation;
 
-    public event EventHandler<ConversionQueueItem>? ItemChanged;
+    public event Action<ConversionQueueItem>? ItemChanged;
 
     public IReadOnlyList<ConversionQueueItem> GetItems()
     {
@@ -32,7 +32,7 @@ public sealed class ConversionQueueService(IConversionService conversionService)
         lock (_sync)
             _items.Add(item);
 
-        ItemChanged?.Invoke(this, item);
+        ItemChanged?.Invoke(item);
         return item.Id;
     }
 
@@ -48,7 +48,7 @@ public sealed class ConversionQueueService(IConversionService conversionService)
             _items.Remove(removed);
         }
 
-        ItemChanged?.Invoke(this, removed with { Status = ConversionQueueStatus.Cancelled });
+        ItemChanged?.Invoke(removed with { Status = ConversionQueueStatus.Cancelled });
         return true;
     }
 
@@ -79,7 +79,7 @@ public sealed class ConversionQueueService(IConversionService conversionService)
                     _currentCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 }
 
-                ItemChanged?.Invoke(this, next);
+                ItemChanged?.Invoke(next);
                 ConversionResult result;
                 try
                 {
@@ -97,7 +97,7 @@ public sealed class ConversionQueueService(IConversionService conversionService)
                             ReplaceItem(updated);
                         }
 
-                        ItemChanged?.Invoke(this, updated);
+                        ItemChanged?.Invoke(updated);
                     });
 
                     result = await conversionService.ConvertAsync(
@@ -141,7 +141,7 @@ public sealed class ConversionQueueService(IConversionService conversionService)
                     ReplaceItem(completed);
                 }
 
-                ItemChanged?.Invoke(this, completed);
+                ItemChanged?.Invoke(completed);
             }
         }
         finally
