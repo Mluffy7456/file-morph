@@ -171,6 +171,11 @@ public partial class MainWindow : Window
 
     private void QueueListBox_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+        UpdateRemoveQueueItemButton();
+    }
+
+    private void UpdateRemoveQueueItemButton()
+    {
         RemoveQueueItemButton.IsEnabled = !_isQueueRunning &&
             QueueListBox.SelectedItem is QueueDisplayItem selected &&
             _queueService.GetItems().Any(item =>
@@ -234,8 +239,7 @@ public partial class MainWindow : Window
                 RunQueueButton.IsEnabled = _queueService.GetItems()
                     .Any(entry => entry.Status == ConversionQueueStatus.Queued);
 
-            QueueListBox_OnSelectionChanged(QueueListBox, new SelectionChangedEventArgs(
-                Selector.SelectionChangedEvent, new List<object>(), new List<object>()));
+            UpdateRemoveQueueItemButton();
         });
     }
 
