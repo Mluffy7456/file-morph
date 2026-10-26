@@ -15,5 +15,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/FileMorph.Core/FileMorph.Core.csproj" />
+    <ProjectReference Include="../../src/FileMorph.Infrastructure/FileMorph.Infrastructure.csproj" />
   </ItemGroup>
 </Project>
