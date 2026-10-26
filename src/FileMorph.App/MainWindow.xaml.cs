@@ -96,15 +96,20 @@ public partial class MainWindow : Window
         }
     }
 
-    private static string GetAvailableDestinationPath(string sourcePath, string outputFormat)
+    private static string GetAvailableDestinationPath(
+        string sourcePath,
+        string outputFormat,
+        IEnumerable<string>? reservedPaths = null)
     {
         var directory = Path.GetDirectoryName(sourcePath)
             ?? throw new InvalidOperationException("Не удалось определить папку исходного файла.");
         var baseName = Path.GetFileNameWithoutExtension(sourcePath);
         var candidate = Path.Combine(directory, $"{baseName}-converted.{outputFormat}");
+        var reserved = reservedPaths?.ToHashSet(StringComparer.OrdinalIgnoreCase)
+            ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var suffix = 2;
 
-        while (File.Exists(candidate))
+        while (File.Exists(candidate) || reserved.Contains(candidate))
         {
             candidate = Path.Combine(directory, $"{baseName}-converted-{suffix}.{outputFormat}");
             suffix++;
