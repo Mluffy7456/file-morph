@@ -169,6 +169,31 @@ public partial class MainWindow : Window
         }
     }
 
+    private void QueueListBox_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        RemoveQueueItemButton.IsEnabled = !_isQueueRunning &&
+            QueueListBox.SelectedItem is QueueDisplayItem selected &&
+            _queueService.GetItems().Any(item =>
+                item.Id == selected.Id && item.Status == ConversionQueueStatus.Queued);
+    }
+
+    private void RemoveQueueItem_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (_isQueueRunning || QueueListBox.SelectedItem is not QueueDisplayItem selected)
+            return;
+
+        if (_queueService.Remove(selected.Id))
+        {
+            var item = _queueItems.FirstOrDefault(entry => entry.Id == selected.Id);
+            if (item is not null)
+                _queueItems.Remove(item);
+
+            ConversionStatusText.Text = "Задание удалено из очереди.";
+        }
+
+        RemoveQueueItemButton.IsEnabled = false;
+    }
+
     private void CancelQueue_OnClick(object sender, RoutedEventArgs e)
     {
         if (!_isQueueRunning)
@@ -185,18 +210,32 @@ public partial class MainWindow : Window
         Dispatcher.Invoke(() =>
         {
             var existing = _queueItems.FirstOrDefault(entry => entry.Id == item.Id);
-            var updated = new QueueDisplayItem(item);
-            if (existing is null)
-                _queueItems.Add(updated);
+            var stillInQueue = _queueService.GetItems().Any(entry => entry.Id == item.Id);
+
+            // Remove() emits a Cancelled notification after the item has left the service.
+            if (!stillInQueue)
+            {
+                if (existing is not null)
+                    _queueItems.Remove(existing);
+            }
             else
             {
-                var index = _queueItems.IndexOf(existing);
-                _queueItems[index] = updated;
+                var updated = new QueueDisplayItem(item);
+                if (existing is null)
+                    _queueItems.Add(updated);
+                else
+                {
+                    var index = _queueItems.IndexOf(existing);
+                    _queueItems[index] = updated;
+                }
             }
 
             if (!_isQueueRunning)
                 RunQueueButton.IsEnabled = _queueService.GetItems()
                     .Any(entry => entry.Status == ConversionQueueStatus.Queued);
+
+            QueueListBox_OnSelectionChanged(QueueListBox, new SelectionChangedEventArgs(
+                Selector.SelectionChangedEvent, new List<object>(), new List<object>()));
         });
     }
 

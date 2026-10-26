@@ -110,12 +110,16 @@
                                 <Button x:Name="RunQueueButton" Margin="8,0,0,0" Content="Запустить очередь" Click="RunQueue_OnClick" IsEnabled="False" />
                             </StackPanel>
                             <Button x:Name="AddToQueueButton" Content="Добавить выбранный файл" Click="AddToQueue_OnClick" />
+                            <Button x:Name="RemoveQueueItemButton" Margin="8,0,0,0"
+                                    Content="Удалить выбранное" Click="RemoveQueueItem_OnClick"
+                                    IsEnabled="False" />
                         </DockPanel>
                         <ListBox x:Name="QueueListBox" MinHeight="80" MaxHeight="130"
                                  Background="{StaticResource CanvasBrush}"
                                  Foreground="{StaticResource PrimaryTextBrush}"
                                  BorderBrush="{StaticResource BorderBrushSoft}"
-                                 DisplayMemberPath="DisplayText" />
+                                 DisplayMemberPath="DisplayText"
+                                 SelectionChanged="QueueListBox_OnSelectionChanged" />
                     </StackPanel>
                 </Grid>
             </Grid>
