@@ -36,7 +36,7 @@
                     Foreground="{StaticResource PrimaryTextBrush}"
                     BorderBrush="{StaticResource BorderBrushSoft}" Padding="4" Margin="0,0,0,18">
             <TabItem Header="Конвертация" IsSelected="True" />
-            <TabItem Header="Очередь" IsEnabled="False" ToolTip="Очередь будет добавлена следующим этапом." />
+            <TabItem Header="Очередь" IsEnabled="False" ToolTip="Очередь доступна в панели конвертации." />
             <TabItem Header="История" IsEnabled="False" ToolTip="История будет добавлена следующим этапом." />
             <TabItem Header="Пресеты" IsEnabled="False" ToolTip="Пресеты будут добавлены следующим этапом." />
             <TabItem Header="Настройки" IsEnabled="False" ToolTip="Настройки будут добавлены следующим этапом." />
@@ -102,6 +102,21 @@
                                Margin="0,14,0,0" Foreground="{StaticResource SecondaryTextBrush}"
                                Text="Поддерживаются PNG, JPEG, BMP, TIFF и GIF. Для анимированных изображений сохраняется первый кадр."
                                TextWrapping="Wrap" />
+                    <StackPanel Grid.Row="2" Grid.ColumnSpan="3" Margin="0,18,0,0">
+                        <TextBlock FontWeight="SemiBold" FontSize="15" Text="Очередь конвертации" />
+                        <DockPanel Margin="0,10,0,8">
+                            <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+                                <Button x:Name="CancelQueueButton" Margin="8,0,0,0" Content="Отменить текущую" Click="CancelQueue_OnClick" IsEnabled="False" />
+                                <Button x:Name="RunQueueButton" Margin="8,0,0,0" Content="Запустить очередь" Click="RunQueue_OnClick" IsEnabled="False" />
+                            </StackPanel>
+                            <Button x:Name="AddToQueueButton" Content="Добавить выбранный файл" Click="AddToQueue_OnClick" />
+                        </DockPanel>
+                        <ListBox x:Name="QueueListBox" MinHeight="80" MaxHeight="130"
+                                 Background="{StaticResource CanvasBrush}"
+                                 Foreground="{StaticResource PrimaryTextBrush}"
+                                 BorderBrush="{StaticResource BorderBrushSoft}"
+                                 DisplayMemberPath="DisplayText" />
+                    </StackPanel>
                 </Grid>
             </Grid>
         </Border>

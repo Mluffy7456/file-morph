@@ -5,18 +5,25 @@ using Microsoft.Win32;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Collections.ObjectModel;
 
 namespace FileMorph.App;
 
 public partial class MainWindow : Window
 {
     private readonly ConversionService _conversionService = new([new WpfImageFormatHandler()]);
+    private readonly ConversionQueueService _queueService;
+    private readonly ObservableCollection<QueueDisplayItem> _queueItems = [];
+    private CancellationTokenSource? _queueRunCancellation;
     private string? _selectedFilePath;
     private bool _isConverting;
 
     public MainWindow()
     {
         InitializeComponent();
+        _queueService = new ConversionQueueService(_conversionService);
+        _queueService.ItemChanged += QueueService_OnItemChanged;
+        QueueListBox.ItemsSource = _queueItems;
     }
 
     private void SelectFile_OnClick(object sender, RoutedEventArgs e)
@@ -124,6 +131,26 @@ public partial class MainWindow : Window
         SelectFileButton.IsEnabled = enabled;
         ConvertButton.IsEnabled = enabled;
         DropZoneBorder.AllowDrop = enabled;
+    }
+
+    private sealed class QueueDisplayItem(ConversionQueueItem item)
+    {
+        public Guid Id { get; } = item.Id;
+        public string DisplayText { get; } = Format(item);
+
+        private static string Format(ConversionQueueItem item)
+        {
+            var state = item.Status switch
+            {
+                ConversionQueueStatus.Queued => "Ожидает",
+                ConversionQueueStatus.Running => $"Выполняется {item.Progress:0}%",
+                ConversionQueueStatus.Succeeded => "Готово",
+                ConversionQueueStatus.Failed => $"Ошибка: {item.ErrorMessage}",
+                ConversionQueueStatus.Cancelled => "Отменено",
+                _ => item.Status.ToString()
+            };
+            return $"{Path.GetFileName(item.Request.SourcePath)} → {item.Request.OutputFormat.ToUpperInvariant()} · {state}";
+        }
     }
 
     private void SetSelectedFile(string path)
