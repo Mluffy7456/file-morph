@@ -66,6 +66,42 @@ public sealed class ConversionQueueServiceTests
         await queue.RunAsync();
     }
 
+    [Fact]
+    public async Task Retry_AddsNewQueuedCopyOfFailedItem_AndKeepsOriginal()
+    {
+        using var files = new TemporaryFiles();
+        var source = files.CreateFile("retry.png");
+        var conversion = new FakeConversionService { FailFirst = true };
+        var queue = new ConversionQueueService(conversion);
+        var originalId = queue.Enqueue(new ConversionRequest(source, files.PathFor("out.png"), ConversionOperation.Convert));
+        await queue.RunAsync();
+
+        Assert.True(queue.Retry(originalId));
+        var items = queue.GetItems();
+        Assert.Equal(2, items.Count);
+        Assert.Equal(ConversionQueueStatus.Failed, items.Single(item => item.Id == originalId).Status);
+        var retry = items.Single(item => item.Id != originalId);
+        Assert.Equal(ConversionQueueStatus.Queued, retry.Status);
+        Assert.Equal(source, retry.Request.SourcePath);
+    }
+
+    [Fact]
+    public async Task ClearCompleted_RemovesOnlyTerminalItems()
+    {
+        using var files = new TemporaryFiles();
+        var source = files.CreateFile("clear.png");
+        var queue = new ConversionQueueService(new FakeConversionService());
+        var completedId = queue.Enqueue(new ConversionRequest(source, files.PathFor("done.png"), ConversionOperation.Convert));
+        var queuedId = queue.Enqueue(new ConversionRequest(source, files.PathFor("waiting.png"), ConversionOperation.Convert));
+        await queue.RunAsync();
+        Assert.Equal(2, queue.GetItems().Count);
+
+        Assert.Equal(2, queue.ClearCompleted());
+        Assert.Empty(queue.GetItems());
+        Assert.False(queue.Retry(completedId));
+        Assert.False(queue.Remove(queuedId));
+    }
+
     private sealed class FakeConversionService : IConversionService
     {
         public int Calls { get; private set; }

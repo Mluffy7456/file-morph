@@ -110,18 +110,34 @@
                                 <Button x:Name="RunQueueButton" Margin="8,0,0,0" Content="Запустить очередь" Click="RunQueue_OnClick" IsEnabled="False" />
                             </StackPanel>
                             <Button x:Name="AddToQueueButton" Content="Добавить выбранный файл" Click="AddToQueue_OnClick" />
-                            <Button x:Name="AddFilesToQueueButton" Margin="8,0,0,0"
-                                    Content="Добавить несколько…" Click="AddFilesToQueue_OnClick" />
-                            <Button x:Name="RemoveQueueItemButton" Margin="8,0,0,0"
-                                    Content="Удалить выбранное" Click="RemoveQueueItem_OnClick"
-                                    IsEnabled="False" />
+                            <Button x:Name="AddFilesToQueueButton" Margin="8,0,0,0" Content="Добавить несколько…" Click="AddFilesToQueue_OnClick" />
+                            <Button x:Name="RemoveQueueItemButton" Margin="8,0,0,0" Content="Удалить выбранное" Click="RemoveQueueItem_OnClick" IsEnabled="False" />
+                            <Button x:Name="RetryQueueItemButton" Margin="8,0,0,0" Content="Повторить" Click="RetryQueueItem_OnClick" IsEnabled="False" />
+                            <Button x:Name="ClearCompletedButton" Margin="8,0,0,0" Content="Очистить готовые" Click="ClearCompleted_OnClick" IsEnabled="False" />
                         </DockPanel>
-                        <ListBox x:Name="QueueListBox" MinHeight="80" MaxHeight="130"
-                                 Background="{StaticResource CanvasBrush}"
-                                 Foreground="{StaticResource PrimaryTextBrush}"
-                                 BorderBrush="{StaticResource BorderBrushSoft}"
-                                 DisplayMemberPath="DisplayText"
-                                 SelectionChanged="QueueListBox_OnSelectionChanged" />
+                        <Grid Margin="0,0,0,8">
+                            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                            <DockPanel>
+                                <TextBlock x:Name="QueueProgressText" DockPanel.Dock="Right" Foreground="{StaticResource SecondaryTextBrush}" Text="0 из 0 · 0%" />
+                                <TextBlock Text="Общий прогресс" FontWeight="SemiBold" />
+                            </DockPanel>
+                            <ProgressBar x:Name="QueueProgressBar" Grid.Row="1" Height="7" Margin="0,6,0,0" Minimum="0" Maximum="100" Value="0" />
+                        </Grid>
+                        <ListBox x:Name="QueueListBox" MinHeight="65" MaxHeight="105" Background="{StaticResource CanvasBrush}" Foreground="{StaticResource PrimaryTextBrush}" BorderBrush="{StaticResource BorderBrushSoft}" SelectionChanged="QueueListBox_OnSelectionChanged">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="4,5">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="90"/></Grid.ColumnDefinitions>
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding DisplayText}" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Margin="0,3,0,0" FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" Text="{Binding DetailText}" TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                        <ProgressBar Grid.Column="1" Height="7" VerticalAlignment="Center" Minimum="0" Maximum="100" Value="{Binding Progress}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                        <TextBlock x:Name="QueueErrorDetailsText" Margin="0,7,0,0" FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" Text="Выберите задание, чтобы увидеть подробности." TextWrapping="Wrap" />
                     </StackPanel>
                 </Grid>
             </Grid>

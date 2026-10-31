@@ -52,6 +52,39 @@ public sealed class ConversionQueueService(IConversionService conversionService)
         return true;
     }
 
+    public bool Retry(Guid id)
+    {
+        ConversionQueueItem? retry;
+        lock (_sync)
+        {
+            var original = _items.FirstOrDefault(item => item.Id == id);
+            if (original is null || original.Status is not (ConversionQueueStatus.Failed or ConversionQueueStatus.Cancelled))
+                return false;
+
+            retry = new ConversionQueueItem(Guid.NewGuid(), original.Request, ConversionQueueStatus.Queued, 0);
+            _items.Add(retry);
+        }
+
+        ItemChanged?.Invoke(retry);
+        return true;
+    }
+
+    public int ClearCompleted()
+    {
+        ConversionQueueItem[] removed;
+        lock (_sync)
+        {
+            removed = _items.Where(item => item.IsTerminal).ToArray();
+            foreach (var item in removed)
+                _items.Remove(item);
+        }
+
+        foreach (var item in removed)
+            ItemChanged?.Invoke(item);
+
+        return removed.Length;
+    }
+
     public void CancelCurrent()
     {
         lock (_sync)

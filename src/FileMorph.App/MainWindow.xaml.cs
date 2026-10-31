@@ -217,14 +217,50 @@ public partial class MainWindow : Window
     private void QueueListBox_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         UpdateRemoveQueueItemButton();
+        UpdateQueueSelectionDetails();
+    }
+
+    private void UpdateQueueSelectionDetails()
+    {
+        if (QueueListBox.SelectedItem is not QueueDisplayItem selected)
+        {
+            QueueErrorDetailsText.Text = "Выберите задание, чтобы увидеть подробности.";
+            return;
+        }
+
+        var item = _queueService.GetItems().FirstOrDefault(entry => entry.Id == selected.Id);
+        QueueErrorDetailsText.Text = item is null ? "Задание удалено." : item.Status switch
+        {
+            ConversionQueueStatus.Failed => $"Код: {item.ErrorCode ?? "не указан"} · {item.ErrorMessage ?? "Подробности отсутствуют."}",
+            ConversionQueueStatus.Cancelled => "Операция была отменена.",
+            ConversionQueueStatus.Succeeded => $"Результат: {item.OutputPath ?? "путь не указан"}",
+            _ => $"Источник: {item.Request.SourcePath}\nРезультат: {item.Request.DestinationPath}"
+        };
+    }
+
+    private void RetryQueueItem_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (_isQueueRunning || QueueListBox.SelectedItem is not QueueDisplayItem selected)
+            return;
+        if (_queueService.Retry(selected.Id))
+            ConversionStatusText.Text = "Задание добавлено в очередь повторно.";
+    }
+
+    private void ClearCompleted_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (_isQueueRunning)
+            return;
+        var count = _queueService.ClearCompleted();
+        ConversionStatusText.Text = $"Удалено завершённых заданий: {count}.";
     }
 
     private void UpdateRemoveQueueItemButton()
     {
-        RemoveQueueItemButton.IsEnabled = !_isQueueRunning &&
-            QueueListBox.SelectedItem is QueueDisplayItem selected &&
-            _queueService.GetItems().Any(item =>
-                item.Id == selected.Id && item.Status == ConversionQueueStatus.Queued);
+        var selected = QueueListBox.SelectedItem as QueueDisplayItem;
+        var item = selected is null ? null : _queueService.GetItems().FirstOrDefault(entry => entry.Id == selected.Id);
+        RemoveQueueItemButton.IsEnabled = !_isQueueRunning && item?.Status == ConversionQueueStatus.Queued;
+        RetryQueueItemButton.IsEnabled = !_isQueueRunning && item?.Status is ConversionQueueStatus.Failed or ConversionQueueStatus.Cancelled;
+        ClearCompletedButton.IsEnabled = !_isQueueRunning && _queueService.GetItems().Any(entry => entry.IsTerminal);
     }
 
     private void RemoveQueueItem_OnClick(object sender, RoutedEventArgs e)
@@ -284,8 +320,21 @@ public partial class MainWindow : Window
                 RunQueueButton.IsEnabled = _queueService.GetItems()
                     .Any(entry => entry.Status == ConversionQueueStatus.Queued);
 
+            UpdateQueueProgress();
             UpdateRemoveQueueItemButton();
+            UpdateQueueSelectionDetails();
         });
+    }
+
+    private void UpdateQueueProgress()
+    {
+        var items = _queueService.GetItems();
+        var total = items.Count;
+        var completed = items.Count(item => item.IsTerminal);
+        var percent = total == 0 ? 0 : items.Average(item => item.Status == ConversionQueueStatus.Succeeded ? 100 : item.Progress);
+        QueueProgressBar.Value = percent;
+        QueueProgressText.Text = $"{completed} из {total} · {percent:0}%";
+        ClearCompletedButton.IsEnabled = !_isQueueRunning && completed > 0;
     }
 
     private static string GetAvailableDestinationPath(
@@ -330,6 +379,15 @@ public partial class MainWindow : Window
     {
         public Guid Id { get; } = item.Id;
         public string DisplayText { get; } = Format(item);
+        public double Progress { get; } = item.Status == ConversionQueueStatus.Succeeded ? 100 : item.Progress;
+        public string DetailText { get; } = item.Status switch
+        {
+            ConversionQueueStatus.Running => $"Выполняется · {item.Progress:0}%",
+            ConversionQueueStatus.Failed => $"Ошибка · {item.ErrorCode ?? "unknown"}",
+            ConversionQueueStatus.Cancelled => "Отменено",
+            ConversionQueueStatus.Succeeded => "Успешно завершено",
+            _ => "Ожидает запуска"
+        };
 
         private static string Format(ConversionQueueItem item)
         {
@@ -338,7 +396,7 @@ public partial class MainWindow : Window
                 ConversionQueueStatus.Queued => "Ожидает",
                 ConversionQueueStatus.Running => $"Выполняется {item.Progress:0}%",
                 ConversionQueueStatus.Succeeded => "Готово",
-                ConversionQueueStatus.Failed => $"Ошибка: {item.ErrorMessage}",
+                ConversionQueueStatus.Failed => "Ошибка",
                 ConversionQueueStatus.Cancelled => "Отменено",
                 _ => item.Status.ToString()
             };
