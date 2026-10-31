@@ -62,6 +62,29 @@ jobs:
       - name: Build installer
         run: iscc installer/FileMorph.iss
 
+      - name: Install and smoke-test installed application
+        shell: pwsh
+        run: |
+          $installDir = Join-Path $env:RUNNER_TEMP "FileMorph-Installed"
+          $installer = (Resolve-Path "artifacts/installer/FileMorph-Setup.exe").Path
+          $install = Start-Process -FilePath $installer -ArgumentList @(
+            "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/SP-", "/DIR=$installDir"
+          ) -Wait -PassThru
+          if ($install.ExitCode -ne 0) {
+            throw "FileMorph installer failed with exit code $($install.ExitCode)."
+          }
+          $installedExe = Join-Path $installDir "FileMorph.exe"
+          if (-not (Test-Path $installedExe)) {
+            throw "Installed FileMorph.exe was not found in $installDir."
+          }
+          $process = Start-Process -FilePath $installedExe -PassThru
+          Start-Sleep -Seconds 10
+          $process.Refresh()
+          if ($process.HasExited) {
+            throw "Installed FileMorph exited during startup (exit code $($process.ExitCode))."
+          }
+          Stop-Process -Id $process.Id -Force
+
       - name: Assemble test ZIP
         shell: pwsh
         run: |
