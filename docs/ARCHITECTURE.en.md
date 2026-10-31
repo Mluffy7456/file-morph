@@ -20,7 +20,7 @@ Each handler declares its identifier, supported input/output extensions, and ope
 
 ## First vertical slice
 
-Basic PNG, JPEG, BMP, TIFF, and GIF conversion is implemented through WIC:
+PNG, JPEG, BMP, TIFF, GIF and WebP conversion is implemented through WIC/SkiaSharp; AVIF and HEIC/HEIF decoding is provided by libheif via ImageSharp.Heif:
 1. The user selects a file through the file picker or drag-and-drop.
 2. The user chooses an output format.
 3. The app chooses an unused destination name beside the source.
@@ -28,7 +28,7 @@ Basic PNG, JPEG, BMP, TIFF, and GIF conversion is implemented through WIC:
 5. The output is published by moving the temporary file without allowing overwrite.
 6. The UI reports progress and the result path or an error.
 
-Current limitation: animated images are reduced to the first frame. AVIF, HEIC, and WebP require a separate engine. Integration tests for the WIC handler still need to be added.
+Current limitation: animated images are reduced to the first frame. AVIF and HEIC/HEIF are input-only; encoding these formats is not implemented. Integration tests for the image handler still need to be added. HEVC patent/licensing implications must be reviewed before public distribution.
 
 ## Job lifecycle
 

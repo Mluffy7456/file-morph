@@ -2,6 +2,10 @@ using System.Diagnostics;
 using System.IO;
 using System.Windows.Media.Imaging;
 using SkiaSharp;
+using HeyRed.ImageSharp.Heif.Formats.Avif;
+using HeyRed.ImageSharp.Heif.Formats.Heif;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Png;
 using FileMorph.Core.Abstractions;
 using FileMorph.Core.Models;
 
@@ -9,7 +13,7 @@ namespace FileMorph.App.Conversion;
 
 /// <summary>
 /// Converts common raster formats using the Windows Imaging Component available through WPF.
-/// This handler is intentionally limited to formats supported by the built-in WPF encoders.
+/// WIC handles common formats; SkiaSharp handles WebP and libheif handles AVIF/HEIC decoding.
 /// </summary>
 public sealed class WpfImageFormatHandler : IFormatHandler
 {
@@ -27,7 +31,7 @@ public sealed class WpfImageFormatHandler : IFormatHandler
 
     public FormatCapabilities Capabilities { get; } = new(
         "builtin-wic-raster",
-        ["png", "jpg", "jpeg", "bmp", "gif", "tif", "tiff", "webp"],
+        ["png", "jpg", "jpeg", "bmp", "gif", "tif", "tiff", "webp", "avif", "heic", "heif"],
         ["png", "jpg", "jpeg", "bmp", "gif", "tif", "tiff", "webp"],
         [ConversionOperation.Convert]);
 
@@ -41,6 +45,10 @@ public sealed class WpfImageFormatHandler : IFormatHandler
 
         var isWebpInput = Path.GetExtension(request.SourcePath).Equals(".webp", StringComparison.OrdinalIgnoreCase);
         var isWebpOutput = request.OutputFormat.Equals("webp", StringComparison.OrdinalIgnoreCase);
+        var isHeifInput = Path.GetExtension(request.SourcePath) is var extension &&
+            (extension.Equals(".avif", StringComparison.OrdinalIgnoreCase) ||
+             extension.Equals(".heic", StringComparison.OrdinalIgnoreCase) ||
+             extension.Equals(".heif", StringComparison.OrdinalIgnoreCase));
         Func<BitmapEncoder>? createEncoder = null;
         if (!isWebpOutput && !Encoders.TryGetValue(request.OutputFormat, out createEncoder))
             return ConversionResult.Failure(
@@ -86,7 +94,17 @@ public sealed class WpfImageFormatHandler : IFormatHandler
                 }
 
                 var decodePath = request.SourcePath;
-                if (isWebpInput)
+                if (isHeifInput)
+                {
+                    var decoderOptions = new DecoderOptions
+                    {
+                        Configuration = new Configuration(new AvifConfigurationModule(), new HeifConfigurationModule())
+                    };
+                    using var heifImage = SixLabors.ImageSharp.Image.Load(decoderOptions, request.SourcePath);
+                    heifImage.SaveAsPng(intermediatePath);
+                    decodePath = intermediatePath;
+                }
+                else if (isWebpInput)
                 {
                     using var bitmap = SKBitmap.Decode(request.SourcePath)
                         ?? throw new InvalidDataException("The WebP source is invalid or cannot be decoded.");

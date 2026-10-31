@@ -34,7 +34,7 @@ public partial class MainWindow : Window
             Title = "Выберите изображение",
             CheckFileExists = true,
             Multiselect = false,
-            Filter = "Поддерживаемые изображения|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.tif;*.tiff;*.webp|Все файлы|*.*"
+            Filter = "Поддерживаемые изображения|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.tif;*.tiff;*.webp;*.avif;*.heic;*.heif|Все файлы|*.*"
         };
 
         if (dialog.ShowDialog(this) == true)
