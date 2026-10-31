@@ -109,23 +109,66 @@ public partial class MainWindow : Window
         if (_isConverting || _isQueueRunning || string.IsNullOrWhiteSpace(_selectedFilePath))
             return;
 
-        if (OutputFormatComboBox.SelectedItem is not ComboBoxItem { Tag: string outputFormat })
+        EnqueueFiles([_selectedFilePath], GetSelectedOutputFormat());
+    }
+
+    private void AddFilesToQueue_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (_isConverting || _isQueueRunning)
             return;
 
+        var dialog = new OpenFileDialog
+        {
+            Title = "Добавить изображения в очередь",
+            CheckFileExists = true,
+            Multiselect = true,
+            Filter = "Поддерживаемые изображения|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.tif;*.tiff|Все файлы|*.*"
+        };
+
+        if (dialog.ShowDialog(this) == true)
+        {
+            SetSelectedFile(dialog.FileNames[0]);
+            EnqueueFiles(dialog.FileNames, GetSelectedOutputFormat());
+        }
+    }
+
+    private string GetSelectedOutputFormat()
+    {
+        return OutputFormatComboBox.SelectedItem is ComboBoxItem { Tag: string format }
+            ? format
+            : throw new InvalidOperationException("Выберите формат результата.");
+    }
+
+    private void EnqueueFiles(IEnumerable<string> sourcePaths, string outputFormat)
+    {
         try
         {
-            var queuedPaths = _queueService.GetItems()
+            var reservedPaths = _queueService.GetItems()
                 .Where(item => item.Status is ConversionQueueStatus.Queued or ConversionQueueStatus.Running)
-                .Select(item => item.Request.DestinationPath);
-            var destinationPath = GetAvailableDestinationPath(_selectedFilePath, outputFormat, queuedPaths);
-            _queueService.Enqueue(new ConversionRequest(
-                _selectedFilePath, destinationPath, ConversionOperation.Convert, outputFormat));
-            RunQueueButton.IsEnabled = true;
-            ConversionStatusText.Text = "Файл добавлен в очередь.";
+                .Select(item => item.Request.DestinationPath)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var addedCount = 0;
+
+            foreach (var sourcePath in sourcePaths
+                .Where(File.Exists)
+                .Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                var destinationPath = GetAvailableDestinationPath(sourcePath, outputFormat, reservedPaths);
+                _queueService.Enqueue(new ConversionRequest(
+                    sourcePath, destinationPath, ConversionOperation.Convert, outputFormat));
+                reservedPaths.Add(destinationPath);
+                addedCount++;
+            }
+
+            RunQueueButton.IsEnabled = _queueService.GetItems()
+                .Any(item => item.Status == ConversionQueueStatus.Queued);
+            ConversionStatusText.Text = addedCount == 1
+                ? "Файл добавлен в очередь."
+                : $"Добавлено файлов в очередь: {addedCount}.";
         }
         catch (Exception exception)
         {
-            ConversionStatusText.Text = $"Не удалось добавить файл: {exception.Message}";
+            ConversionStatusText.Text = $"Не удалось добавить файлы: {exception.Message}";
         }
     }
 
@@ -139,6 +182,7 @@ public partial class MainWindow : Window
         _queueRunCancellation = new CancellationTokenSource();
         RunQueueButton.IsEnabled = false;
         AddToQueueButton.IsEnabled = false;
+        AddFilesToQueueButton.IsEnabled = false;
         CancelQueueButton.IsEnabled = true;
         SetControlsEnabled(false);
         ConversionStatusText.Text = "Выполняется очередь конвертации…";
@@ -163,6 +207,7 @@ public partial class MainWindow : Window
             _isQueueRunning = false;
             CancelQueueButton.IsEnabled = false;
             AddToQueueButton.IsEnabled = true;
+            AddFilesToQueueButton.IsEnabled = true;
             SetControlsEnabled(true);
             RunQueueButton.IsEnabled = _queueService.GetItems()
                 .Any(item => item.Status == ConversionQueueStatus.Queued);
