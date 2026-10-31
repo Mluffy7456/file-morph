@@ -44,7 +44,7 @@ jobs:
           Installer:
           Run FileMorph-Setup.exe.
           
-          This is an early alpha. PNG, JPEG, BMP, TIFF, GIF and WebP conversion is available. AVIF and HEIC/HEIF are supported as input only.
+          This is an early alpha. Only PNG, JPEG, BMP, TIFF and GIF conversion is implemented.
           Windows x64 required. Self-contained package; .NET runtime is included.
           '@ | Set-Content artifacts/package/README.txt -Encoding utf8
           Compress-Archive -Path artifacts/package/* -DestinationPath artifacts/FileMorph-Alpha-win-x64.zip -Force
