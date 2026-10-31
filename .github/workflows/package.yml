@@ -1,0 +1,114 @@
+name: Windows Package
+
+on:
+  push:
+    branches: ["feat/architecture-foundation"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Publish portable app
+        run: dotnet publish src/FileMorph.App/FileMorph.App.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=false -p:IncludeNativeLibrariesForSelfExtract=true --output artifacts/portable
+
+      - name: Bundle Microsoft Visual C++ runtime
+        shell: pwsh
+        run: |
+          choco install vcredist140 --yes --no-progress
+          $runtimeFiles = @(
+            "vcruntime140.dll",
+            "vcruntime140_1.dll",
+            "msvcp140.dll",
+            "msvcp140_1.dll",
+            "msvcp140_2.dll",
+            "concrt140.dll"
+          )
+          foreach ($name in $runtimeFiles) {
+            $source = Join-Path "$env:WINDIR\System32" $name
+            if (Test-Path $source) {
+              Copy-Item $source artifacts/portable/ -Force
+            }
+          }
+          foreach ($name in @("vcruntime140.dll", "vcruntime140_1.dll", "msvcp140.dll")) {
+            if (-not (Test-Path "artifacts/portable/$name")) {
+              throw "Missing app-local VC runtime file: $name"
+            }
+          }
+
+      - name: Smoke test portable executable
+        shell: pwsh
+        run: |
+          $exe = Resolve-Path "artifacts/portable/FileMorph.exe"
+          $process = Start-Process -FilePath $exe -PassThru
+          Start-Sleep -Seconds 12
+          $process.Refresh()
+          if ($process.HasExited) {
+            throw "FileMorph exited during startup smoke test (exit code $($process.ExitCode))."
+          }
+          Stop-Process -Id $process.Id -Force
+
+      - name: Build installer
+        run: iscc installer/FileMorph.iss
+
+      - name: Install and smoke-test installed application
+        shell: pwsh
+        run: |
+          $installDir = Join-Path $env:RUNNER_TEMP "FileMorph-Installed"
+          $installer = (Resolve-Path "artifacts/installer/FileMorph-Setup.exe").Path
+          $install = Start-Process -FilePath $installer -ArgumentList @(
+            "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/SP-", "/DIR=$installDir"
+          ) -Wait -PassThru
+          if ($install.ExitCode -ne 0) {
+            throw "FileMorph installer failed with exit code $($install.ExitCode)."
+          }
+          $installedExe = Join-Path $installDir "FileMorph.exe"
+          if (-not (Test-Path $installedExe)) {
+            throw "Installed FileMorph.exe was not found in $installDir."
+          }
+          $process = Start-Process -FilePath $installedExe -PassThru
+          Start-Sleep -Seconds 10
+          $process.Refresh()
+          if ($process.HasExited) {
+            throw "Installed FileMorph exited during startup (exit code $($process.ExitCode))."
+          }
+          Stop-Process -Id $process.Id -Force
+
+      - name: Assemble test ZIP
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path artifacts/package | Out-Null
+          Copy-Item artifacts/portable artifacts/package/portable -Recurse
+          Copy-Item artifacts/installer/FileMorph-Setup.exe artifacts/package/
+          @'
+          FileMorph Alpha test build
+          
+          Portable:
+          Open the portable folder and run FileMorph.exe.
+          
+          Installer:
+          Run FileMorph-Setup.exe.
+          
+          This is an early alpha. Only PNG, JPEG, BMP, TIFF and GIF conversion is implemented.
+          Windows x64 required. Self-contained package; .NET runtime is included.
+          '@ | Set-Content artifacts/package/README.txt -Encoding utf8
+          Compress-Archive -Path artifacts/package/* -DestinationPath artifacts/FileMorph-Alpha-win-x64.zip -Force
+
+      - name: Upload test package
+        uses: actions/upload-artifact@v4
+        with:
+          name: FileMorph-Alpha-win-x64
+          path: artifacts/FileMorph-Alpha-win-x64.zip
+          if-no-files-found: error
+          retention-days: 30

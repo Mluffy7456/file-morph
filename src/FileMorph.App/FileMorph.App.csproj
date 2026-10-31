@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>FileMorph.App</RootNamespace>
+    <AssemblyName>FileMorph</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="SkiaSharp" Version="3.119.1" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="3.119.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../FileMorph.Core/FileMorph.Core.csproj" />
+    <ProjectReference Include="../FileMorph.Infrastructure/FileMorph.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>
