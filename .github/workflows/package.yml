@@ -23,8 +23,38 @@ jobs:
       - name: Publish portable app
         run: dotnet publish src/FileMorph.App/FileMorph.App.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=false -p:IncludeNativeLibrariesForSelfExtract=true --output artifacts/portable
 
-      - name: Install Inno Setup
-        run: choco install innosetup --yes --no-progress
+      - name: Bundle Microsoft Visual C++ runtime
+        shell: pwsh
+        run: |
+          $roots = @(
+            "$env:ProgramFiles\Microsoft Visual Studio\2022",
+            "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2022"
+          ) | Where-Object { Test-Path $_ }
+          $crt = Get-ChildItem -Path $roots -Filter Microsoft.VC143.CRT -Directory -Recurse -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -match "\\Redist\\MSVC\\[^\\]+\\x64\\Microsoft\.VC143\.CRT$" } |
+            Select-Object -First 1
+          if (-not $crt) {
+            throw "Microsoft Visual C++ 2015-2022 x64 runtime redist was not found on the runner."
+          }
+          Copy-Item "$($crt.FullName)\*" artifacts/portable/ -Force
+          $required = @("vcruntime140.dll", "vcruntime140_1.dll", "msvcp140.dll")
+          foreach ($name in $required) {
+            if (-not (Test-Path "artifacts/portable/$name")) {
+              throw "Missing app-local VC runtime file: $name"
+            }
+          }
+
+      - name: Smoke test portable executable
+        shell: pwsh
+        run: |
+          $exe = Resolve-Path "artifacts/portable/FileMorph.exe"
+          $process = Start-Process -FilePath $exe -PassThru
+          Start-Sleep -Seconds 12
+          $process.Refresh()
+          if ($process.HasExited) {
+            throw "FileMorph exited during startup smoke test (exit code $($process.ExitCode))."
+          }
+          Stop-Process -Id $process.Id -Force
 
       - name: Build installer
         run: iscc installer/FileMorph.iss

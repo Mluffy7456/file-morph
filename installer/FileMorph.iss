@@ -7,12 +7,14 @@
 AppId={{6B3C72F1-8A6D-4E2C-9A55-7E89D1C0A111}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
+AppVerName={#MyAppName} {#MyAppVersion}
 AppPublisher={#MyAppPublisher}
 DefaultDirName={autopf}\FileMorph
 DefaultGroupName=FileMorph
 OutputDir=..\artifacts\installer
 OutputBaseFilename=FileMorph-Setup
 Compression=lzma2
+; VC++ runtime files are bundled app-local by the packaging workflow.
 SolidCompression=yes
 WizardStyle=modern
 ArchitecturesInstallIn64BitMode=x64
