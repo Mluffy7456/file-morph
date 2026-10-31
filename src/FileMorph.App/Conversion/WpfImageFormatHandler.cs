@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Windows.Media.Imaging;
+using SkiaSharp;
 using FileMorph.Core.Abstractions;
 using FileMorph.Core.Models;
 
@@ -26,8 +27,8 @@ public sealed class WpfImageFormatHandler : IFormatHandler
 
     public FormatCapabilities Capabilities { get; } = new(
         "builtin-wic-raster",
-        ["png", "jpg", "jpeg", "bmp", "gif", "tif", "tiff"],
-        ["png", "jpg", "jpeg", "bmp", "gif", "tif", "tiff"],
+        ["png", "jpg", "jpeg", "bmp", "gif", "tif", "tiff", "webp"],
+        ["png", "jpg", "jpeg", "bmp", "gif", "tif", "tiff", "webp"],
         [ConversionOperation.Convert]);
 
     public async Task<ConversionResult> ExecuteAsync(
@@ -38,7 +39,9 @@ public sealed class WpfImageFormatHandler : IFormatHandler
         ArgumentNullException.ThrowIfNull(request);
         var stopwatch = Stopwatch.StartNew();
 
-        if (!Encoders.TryGetValue(request.OutputFormat, out var createEncoder))
+        var isWebpInput = Path.GetExtension(request.SourcePath).Equals(".webp", StringComparison.OrdinalIgnoreCase);
+        var isWebpOutput = request.OutputFormat.Equals("webp", StringComparison.OrdinalIgnoreCase);
+        if (!isWebpOutput && !Encoders.TryGetValue(request.OutputFormat, out var createEncoder))
             return ConversionResult.Failure(
                 "unsupported_output_format",
                 $"The built-in image engine cannot write '{request.OutputFormat}'.",
@@ -57,6 +60,7 @@ public sealed class WpfImageFormatHandler : IFormatHandler
         var temporaryPath = Path.Combine(
             destinationDirectory,
             $".filemorph-{Guid.NewGuid():N}.tmp");
+        var intermediatePath = Path.Combine(destinationDirectory, $".filemorph-{Guid.NewGuid():N}.png");
 
         try
         {
@@ -67,22 +71,46 @@ public sealed class WpfImageFormatHandler : IFormatHandler
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
+                if (isWebpOutput)
+                {
+                    using var bitmap = SKBitmap.Decode(request.SourcePath)
+                        ?? throw new InvalidDataException("The source is not a supported or readable raster image.");
+                    using var image = SKImage.FromBitmap(bitmap);
+                    using var encoded = image.Encode(SKEncodedImageFormat.Webp, 90)
+                        ?? throw new InvalidDataException("WebP encoding failed.");
+                    using var outputStream = new FileStream(temporaryPath, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+                    encoded.SaveTo(outputStream);
+                    outputStream.Flush(flushToDisk: true);
+                    return;
+                }
+
+                var decodePath = request.SourcePath;
+                if (isWebpInput)
+                {
+                    using var bitmap = SKBitmap.Decode(request.SourcePath)
+                        ?? throw new InvalidDataException("The WebP source is invalid or cannot be decoded.");
+                    using var image = SKImage.FromBitmap(bitmap);
+                    using var png = image.Encode(SKEncodedImageFormat.Png, 100)
+                        ?? throw new InvalidDataException("Could not prepare the WebP image for conversion.");
+                    using var intermediateStream = new FileStream(intermediatePath, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+                    png.SaveTo(intermediateStream);
+                    intermediateStream.Flush(flushToDisk: true);
+                    decodePath = intermediatePath;
+                }
+
                 using var sourceStream = new FileStream(
-                    request.SourcePath, FileMode.Open, FileAccess.Read, FileShare.Read,
+                    decodePath, FileMode.Open, FileAccess.Read, FileShare.Read,
                     bufferSize: 64 * 1024, FileOptions.SequentialScan);
                 var decoder = BitmapDecoder.Create(
                     sourceStream,
                     BitmapCreateOptions.PreservePixelFormat,
                     BitmapCacheOption.OnLoad);
-
                 if (decoder.Frames.Count == 0)
                     throw new InvalidDataException("The source does not contain a readable image frame.");
 
-                var encoder = createEncoder();
+                var encoder = createEncoder!();
                 encoder.Frames.Add(BitmapFrame.Create(decoder.Frames[0]));
-
-                using var outputStream = new FileStream(
-                    temporaryPath, FileMode.CreateNew, FileAccess.Write, FileShare.None,
+                using var outputStream = new FileStream(temporaryPath, FileMode.CreateNew, FileAccess.Write, FileShare.None,
                     bufferSize: 64 * 1024, FileOptions.SequentialScan);
                 encoder.Save(outputStream);
                 outputStream.Flush(flushToDisk: true);
@@ -113,6 +141,8 @@ public sealed class WpfImageFormatHandler : IFormatHandler
             {
                 if (File.Exists(temporaryPath))
                     File.Delete(temporaryPath);
+                if (File.Exists(intermediatePath))
+                    File.Delete(intermediatePath);
             }
             catch (IOException)
             {

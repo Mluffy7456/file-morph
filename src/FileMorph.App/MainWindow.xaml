@@ -94,13 +94,14 @@
                             <ComboBoxItem Content="BMP" Tag="bmp" />
                             <ComboBoxItem Content="TIFF" Tag="tiff" />
                             <ComboBoxItem Content="GIF" Tag="gif" />
+                            <ComboBoxItem Content="WebP" Tag="webp" />
                         </ComboBox>
                     </StackPanel>
                     <Button x:Name="ConvertButton" Grid.Row="0" Grid.Column="2" MinWidth="170" VerticalAlignment="Bottom"
                             Content="Конвертировать" Click="Convert_OnClick" />
                     <TextBlock x:Name="ConversionStatusText" Grid.Row="1" Grid.ColumnSpan="3"
                                Margin="0,14,0,0" Foreground="{StaticResource SecondaryTextBrush}"
-                               Text="Поддерживаются PNG, JPEG, BMP, TIFF и GIF. Для анимированных изображений сохраняется первый кадр."
+                               Text="Поддерживаются PNG, JPEG, BMP, TIFF, GIF и WebP. Для анимированных изображений сохраняется первый кадр."
                                TextWrapping="Wrap" />
                     <StackPanel Grid.Row="2" Grid.ColumnSpan="3" Margin="0,18,0,0">
                         <TextBlock FontWeight="SemiBold" FontSize="15" Text="Очередь конвертации" />

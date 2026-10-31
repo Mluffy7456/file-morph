@@ -6,11 +6,11 @@ FileMorph is a local-first file converter for Windows. Conversion must not requi
 
 ## Status
 
-Early Alpha. The first end-to-end conversion slice is implemented for common raster images using Windows Imaging Component (WIC) through WPF: PNG, JPEG, BMP, TIFF and GIF. The UI supports file picking, drag-and-drop, output format selection, progress feedback, and saving a separate output next to the source. Animated inputs are currently reduced to their first frame. AVIF, HEIC, WebP, batch queue, history, presets and Explorer integration are not implemented yet.
+Early Alpha. The first end-to-end conversion slice is implemented for common raster images using Windows Imaging Component (WIC) through WPF: PNG, JPEG, BMP, TIFF, GIF and WebP. WebP is handled by the bundled SkiaSharp codec; other formats use Windows Imaging Component (WIC). The UI supports file picking, drag-and-drop, output format selection, progress feedback, and saving a separate output next to the source. Animated inputs are currently reduced to their first frame. AVIF and HEIC, history, presets and Explorer integration are not implemented yet. Batch queue management is available in the alpha UI.
 
 ## Structure
 
-- src/FileMorph.App — WPF desktop UI and built-in WIC image handler
+- src/FileMorph.App — WPF desktop UI, WIC image handler and SkiaSharp WebP codec
 - src/FileMorph.Core — domain models and contracts
 - src/FileMorph.Infrastructure — external-engine process execution and conversion orchestration
 - tests/FileMorph.Core.Tests — core unit tests

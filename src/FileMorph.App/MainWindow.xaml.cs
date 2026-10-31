@@ -34,7 +34,7 @@ public partial class MainWindow : Window
             Title = "Выберите изображение",
             CheckFileExists = true,
             Multiselect = false,
-            Filter = "Поддерживаемые изображения|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.tif;*.tiff|Все файлы|*.*"
+            Filter = "Поддерживаемые изображения|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.tif;*.tiff;*.webp|Все файлы|*.*"
         };
 
         if (dialog.ShowDialog(this) == true)
@@ -122,7 +122,7 @@ public partial class MainWindow : Window
             Title = "Добавить изображения в очередь",
             CheckFileExists = true,
             Multiselect = true,
-            Filter = "Поддерживаемые изображения|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.tif;*.tiff|Все файлы|*.*"
+            Filter = "Поддерживаемые изображения|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.tif;*.tiff;*.webp|Все файлы|*.*"
         };
 
         if (dialog.ShowDialog(this) == true)
