@@ -41,7 +41,8 @@ public sealed class WpfImageFormatHandler : IFormatHandler
 
         var isWebpInput = Path.GetExtension(request.SourcePath).Equals(".webp", StringComparison.OrdinalIgnoreCase);
         var isWebpOutput = request.OutputFormat.Equals("webp", StringComparison.OrdinalIgnoreCase);
-        if (!isWebpOutput && !Encoders.TryGetValue(request.OutputFormat, out var createEncoder))
+        Func<BitmapEncoder>? createEncoder = null;
+        if (!isWebpOutput && !Encoders.TryGetValue(request.OutputFormat, out createEncoder))
             return ConversionResult.Failure(
                 "unsupported_output_format",
                 $"The built-in image engine cannot write '{request.OutputFormat}'.",
