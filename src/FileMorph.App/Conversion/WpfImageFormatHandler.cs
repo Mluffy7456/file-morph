@@ -79,9 +79,9 @@ public sealed class WpfImageFormatHandler : IFormatHandler
                     using var image = SKImage.FromBitmap(bitmap);
                     using var encoded = image.Encode(SKEncodedImageFormat.Webp, 90)
                         ?? throw new InvalidDataException("WebP encoding failed.");
-                    using var outputStream = new FileStream(temporaryPath, FileMode.CreateNew, FileAccess.Write, FileShare.None);
-                    encoded.SaveTo(outputStream);
-                    outputStream.Flush(flushToDisk: true);
+                    using var webpOutputStream = new FileStream(temporaryPath, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+                    encoded.SaveTo(webpOutputStream);
+                    webpOutputStream.Flush(flushToDisk: true);
                     return;
                 }
 
