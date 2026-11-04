@@ -59,13 +59,13 @@ public partial class MainWindow : Window
             SetSelectedFile(dialog.FileName);
     }
 
-    private void DropZone_OnDragOver(object sender, DragEventArgs e)
+    private void DropZone_OnDragOver(object sender, System.Windows.DragEventArgs e)
     {
         e.Effects = e.Data.GetDataPresent(DataFormats.FileDrop) ? DragDropEffects.Copy : DragDropEffects.None;
         e.Handled = true;
     }
 
-    private void DropZone_OnDrop(object sender, DragEventArgs e)
+    private void DropZone_OnDrop(object sender, System.Windows.DragEventArgs e)
     {
         if (_isConverting || _isQueueRunning)
             return;
