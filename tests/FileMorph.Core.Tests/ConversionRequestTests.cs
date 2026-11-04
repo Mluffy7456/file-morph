@@ -22,6 +22,29 @@ public sealed class ConversionRequestTests
         Assert.Throws<ArgumentException>(() => new ConversionRequest(source, source, ConversionOperation.Convert));
     }
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(101)]
+    public void Constructor_RejectsQualityOutsideRange(int quality)
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => new ConversionRequest(
+            Path.Combine(Path.GetTempPath(), "source.png"),
+            Path.Combine(Path.GetTempPath(), "destination.jpg"),
+            ConversionOperation.Convert,
+            quality: quality));
+    }
+
+    [Fact]
+    public void Constructor_PreservesQuality()
+    {
+        var request = new ConversionRequest(
+            Path.Combine(Path.GetTempPath(), "source.png"),
+            Path.Combine(Path.GetTempPath(), "destination.jpg"),
+            ConversionOperation.Convert,
+            quality: 65);
+        Assert.Equal(65, request.Quality);
+    }
+
     [Fact]
     public void Constructor_DerivesOutputFormatFromDestination()
     {

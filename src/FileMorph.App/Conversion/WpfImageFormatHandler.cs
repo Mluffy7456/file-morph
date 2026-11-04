@@ -13,16 +13,16 @@ namespace FileMorph.App.Conversion;
 /// </summary>
 public sealed class WpfImageFormatHandler : IFormatHandler
 {
-    private static readonly IReadOnlyDictionary<string, Func<BitmapEncoder>> Encoders =
-        new Dictionary<string, Func<BitmapEncoder>>(StringComparer.OrdinalIgnoreCase)
+    private static readonly IReadOnlyDictionary<string, Func<int, BitmapEncoder>> Encoders =
+        new Dictionary<string, Func<int, BitmapEncoder>>(StringComparer.OrdinalIgnoreCase)
         {
-            ["png"] = static () => new PngBitmapEncoder(),
-            ["jpg"] = static () => new JpegBitmapEncoder { QualityLevel = 92 },
-            ["jpeg"] = static () => new JpegBitmapEncoder { QualityLevel = 92 },
-            ["bmp"] = static () => new BmpBitmapEncoder(),
-            ["gif"] = static () => new GifBitmapEncoder(),
-            ["tif"] = static () => new TiffBitmapEncoder(),
-            ["tiff"] = static () => new TiffBitmapEncoder()
+            ["png"] = static _ => new PngBitmapEncoder(),
+            ["jpg"] = static quality => new JpegBitmapEncoder { QualityLevel = quality },
+            ["jpeg"] = static quality => new JpegBitmapEncoder { QualityLevel = quality },
+            ["bmp"] = static _ => new BmpBitmapEncoder(),
+            ["gif"] = static _ => new GifBitmapEncoder(),
+            ["tif"] = static _ => new TiffBitmapEncoder(),
+            ["tiff"] = static _ => new TiffBitmapEncoder()
         };
 
     public FormatCapabilities Capabilities { get; } = new(
@@ -41,7 +41,7 @@ public sealed class WpfImageFormatHandler : IFormatHandler
 
         var isWebpInput = Path.GetExtension(request.SourcePath).Equals(".webp", StringComparison.OrdinalIgnoreCase);
         var isWebpOutput = request.OutputFormat.Equals("webp", StringComparison.OrdinalIgnoreCase);
-        Func<BitmapEncoder>? createEncoder = null;
+        Func<int, BitmapEncoder>? createEncoder = null;
         if (!isWebpOutput && !Encoders.TryGetValue(request.OutputFormat, out createEncoder))
             return ConversionResult.Failure(
                 "unsupported_output_format",
@@ -77,7 +77,7 @@ public sealed class WpfImageFormatHandler : IFormatHandler
                     using var bitmap = SKBitmap.Decode(request.SourcePath)
                         ?? throw new InvalidDataException("The source is not a supported or readable raster image.");
                     using var image = SKImage.FromBitmap(bitmap);
-                    using var encoded = image.Encode(SKEncodedImageFormat.Webp, 90)
+                    using var encoded = image.Encode(SKEncodedImageFormat.Webp, request.Quality)
                         ?? throw new InvalidDataException("WebP encoding failed.");
                     using var webpOutputStream = new FileStream(temporaryPath, FileMode.CreateNew, FileAccess.Write, FileShare.None);
                     encoded.SaveTo(webpOutputStream);
@@ -109,7 +109,7 @@ public sealed class WpfImageFormatHandler : IFormatHandler
                 if (decoder.Frames.Count == 0)
                     throw new InvalidDataException("The source does not contain a readable image frame.");
 
-                var encoder = createEncoder!();
+                var encoder = createEncoder!(request.Quality);
                 encoder.Frames.Add(BitmapFrame.Create(decoder.Frames[0]));
                 using var outputStream = new FileStream(temporaryPath, FileMode.CreateNew, FileAccess.Write, FileShare.None,
                     bufferSize: 64 * 1024, FileOptions.SequentialScan);

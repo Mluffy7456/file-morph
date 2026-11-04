@@ -27,6 +27,7 @@ public partial class MainWindow : Window
         _isLightTheme = App.LoadThemePreference();
         App.ApplyTheme(_isLightTheme);
         UpdateThemeToggleText();
+        QualityValueText.Text = $"{QualitySlider.Value:0}%";
         _queueService = new ConversionQueueService(_conversionService);
         _queueService.ItemChanged += QueueService_OnItemChanged;
         QueueListBox.ItemsSource = _queueItems;
@@ -44,6 +45,12 @@ public partial class MainWindow : Window
     private bool _isLightTheme;
 
     private void ThemeToggle_OnClick(object sender, RoutedEventArgs e) => ToggleTheme();
+
+    private void QualitySlider_OnValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (QualityValueText is not null)
+            QualityValueText.Text = $"{e.NewValue:0}%";
+    }
 
     private void ToggleTheme()
     {
@@ -115,7 +122,7 @@ public partial class MainWindow : Window
 
         var sourcePath = _selectedFilePath;
         var destinationPath = GetAvailableDestinationPath(sourcePath, outputFormat);
-        var request = new ConversionRequest(sourcePath, destinationPath, ConversionOperation.Convert, outputFormat);
+        var request = new ConversionRequest(sourcePath, destinationPath, ConversionOperation.Convert, outputFormat, (int)QualitySlider.Value);
         var progress = new Progress<double>(value =>
         {
             ConversionStatusText.Text = $"Выполняется конвертация… {value / 100d:P0}";
@@ -200,7 +207,7 @@ public partial class MainWindow : Window
             {
                 var destinationPath = GetAvailableDestinationPath(sourcePath, outputFormat, reservedPaths);
                 _queueService.Enqueue(new ConversionRequest(
-                    sourcePath, destinationPath, ConversionOperation.Convert, outputFormat));
+                    sourcePath, destinationPath, ConversionOperation.Convert, outputFormat, (int)QualitySlider.Value));
                 reservedPaths.Add(destinationPath);
                 addedCount++;
             }

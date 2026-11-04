@@ -177,7 +177,7 @@ public sealed class ConversionQueueService(IConversionService conversionService)
         }
         while (File.Exists(candidate) || reserved.Contains(candidate));
 
-        return new ConversionRequest(original.SourcePath, candidate, original.Operation, original.OutputFormat);
+        return new ConversionRequest(original.SourcePath, candidate, original.Operation, original.OutputFormat, original.Quality);
     }
 
     private void ReplaceItem(ConversionQueueItem item)
