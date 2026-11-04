@@ -1,5 +1,5 @@
 using System.IO;
-using System.Windows.Media;
+using MediaColor = System.Windows.Media.Color;
 
 namespace FileMorph.App;
 
@@ -50,21 +50,21 @@ public partial class App : System.Windows.Application
         resources["PrimaryTextColor"] = ColorFromHex(isLight ? "#FF202329" : "#FFF1F1F3");
         resources["SecondaryTextColor"] = ColorFromHex(isLight ? "#FF68707C" : "#FFA6A8AE");
 
-        UpdateBrush("CanvasBrush", (Color)resources["CanvasColor"]);
+        UpdateBrush("CanvasBrush", (MediaColor)resources["CanvasColor"]);
         UpdateBrush("SurfaceBrush", (Color)resources["SurfaceColor"]);
         UpdateBrush("BorderBrushSoft", (Color)resources["BorderColor"]);
         UpdateBrush("PrimaryTextBrush", (Color)resources["PrimaryTextColor"]);
         UpdateBrush("SecondaryTextBrush", (Color)resources["SecondaryTextColor"]);
     }
 
-    private static void UpdateBrush(string key, Color color)
+    private static void UpdateBrush(string key, MediaColor color)
     {
         if (Current.Resources[key] is SolidColorBrush brush)
             brush.Color = color;
     }
 
-    private static Color ColorFromHex(string value) =>
-        (Color)ColorConverter.ConvertFromString(value)!;
+    private static MediaColor ColorFromHex(string value) =>
+        (MediaColor)System.Windows.Media.ColorConverter.ConvertFromString(value)!;
 
     private static string GetSettingsPath() =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FileMorph", "settings.json");
