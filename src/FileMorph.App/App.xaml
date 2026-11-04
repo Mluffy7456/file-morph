@@ -8,22 +8,30 @@
         <Color x:Key="BorderColor">#FF303238</Color>
         <Color x:Key="PrimaryTextColor">#FFF1F1F3</Color>
         <Color x:Key="SecondaryTextColor">#FFA6A8AE</Color>
-        <SolidColorBrush x:Key="CanvasBrush" Color="{StaticResource CanvasColor}" />
-        <SolidColorBrush x:Key="SurfaceBrush" Color="{StaticResource SurfaceColor}" />
-        <SolidColorBrush x:Key="BorderBrushSoft" Color="{StaticResource BorderColor}" />
-        <SolidColorBrush x:Key="PrimaryTextBrush" Color="{StaticResource PrimaryTextColor}" />
-        <SolidColorBrush x:Key="SecondaryTextBrush" Color="{StaticResource SecondaryTextColor}" />
+        <SolidColorBrush x:Key="CanvasBrush" Color="{DynamicResource CanvasColor}" />
+        <SolidColorBrush x:Key="SurfaceBrush" Color="{DynamicResource SurfaceColor}" />
+        <SolidColorBrush x:Key="BorderBrushSoft" Color="{DynamicResource BorderColor}" />
+        <SolidColorBrush x:Key="PrimaryTextBrush" Color="{DynamicResource PrimaryTextColor}" />
+        <SolidColorBrush x:Key="SecondaryTextBrush" Color="{DynamicResource SecondaryTextColor}" />
         <Style TargetType="Button">
-            <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
-            <Setter Property="Background" Value="{StaticResource SurfaceBrush}" />
-            <Setter Property="BorderBrush" Value="{StaticResource BorderBrushSoft}" />
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
+            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrushSoft}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Padding" Value="14,9" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="FontSize" Value="13" />
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="BorderBrush" Value="#FF8D96A8" />
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Opacity" Value="0.48" />
+                </Trigger>
+            </Style.Triggers>
         </Style>
         <Style TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
             <Setter Property="FontFamily" Value="Segoe UI Variable Text, Segoe UI" />
         </Style>
     </Application.Resources>

@@ -24,6 +24,9 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        _isLightTheme = App.LoadThemePreference();
+        App.ApplyTheme(_isLightTheme);
+        UpdateThemeToggleText();
         _queueService = new ConversionQueueService(_conversionService);
         _queueService.ItemChanged += QueueService_OnItemChanged;
         QueueListBox.ItemsSource = _queueItems;
@@ -33,9 +36,25 @@ public partial class MainWindow : Window
         _trayIcon.Visible = true;
         _trayIcon.ContextMenuStrip = new Forms.ContextMenuStrip();
         _trayIcon.ContextMenuStrip.Items.Add("Открыть", null, (_, _) => Dispatcher.Invoke(() => { Show(); WindowState = WindowState.Normal; Activate(); }));
+        _trayIcon.ContextMenuStrip.Items.Add("Сменить тему", null, (_, _) => Dispatcher.Invoke(ToggleTheme));
         _trayIcon.ContextMenuStrip.Items.Add("Выход", null, (_, _) => Dispatcher.Invoke(() => { _allowClose = true; Close(); System.Windows.Application.Current.Shutdown(); }));
         _trayIcon.DoubleClick += (_, _) => Dispatcher.Invoke(() => { Show(); WindowState = WindowState.Normal; Activate(); });
     }
+
+    private bool _isLightTheme;
+
+    private void ThemeToggle_OnClick(object sender, RoutedEventArgs e) => ToggleTheme();
+
+    private void ToggleTheme()
+    {
+        _isLightTheme = !_isLightTheme;
+        App.ApplyTheme(_isLightTheme);
+        App.SaveThemePreference(_isLightTheme);
+        UpdateThemeToggleText();
+    }
+
+    private void UpdateThemeToggleText() =>
+        ThemeToggleButton.Content = _isLightTheme ? "Тёмная тема" : "Светлая тема";
 
     private void CompactMode_OnClick(object sender, RoutedEventArgs e) { FullLayout.Visibility = Visibility.Collapsed; CompactLayout.Visibility = Visibility.Visible; Width = 440; Height = 235; MinWidth = 390; MinHeight = 210; MaxWidth = 560; MaxHeight = 320; WindowState = WindowState.Normal; }
     private void FullMode_OnClick(object sender, RoutedEventArgs e) { CompactLayout.Visibility = Visibility.Collapsed; FullLayout.Visibility = Visibility.Visible; MinWidth = 560; MinHeight = 520; MaxWidth = double.PositiveInfinity; MaxHeight = double.PositiveInfinity; Width = 1040; Height = 780; }
