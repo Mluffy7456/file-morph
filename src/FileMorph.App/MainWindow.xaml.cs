@@ -33,7 +33,7 @@ public partial class MainWindow : Window
         _trayIcon.Visible = true;
         _trayIcon.ContextMenuStrip = new Forms.ContextMenuStrip();
         _trayIcon.ContextMenuStrip.Items.Add("Открыть", null, (_, _) => Dispatcher.Invoke(() => { Show(); WindowState = WindowState.Normal; Activate(); }));
-        _trayIcon.ContextMenuStrip.Items.Add("Выход", null, (_, _) => Dispatcher.Invoke(() => { _allowClose = true; Close(); Application.Current.Shutdown(); }));
+        _trayIcon.ContextMenuStrip.Items.Add("Выход", null, (_, _) => Dispatcher.Invoke(() => { _allowClose = true; Close(); System.Windows.Application.Current.Shutdown(); }));
         _trayIcon.DoubleClick += (_, _) => Dispatcher.Invoke(() => { Show(); WindowState = WindowState.Normal; Activate(); });
     }
 
@@ -47,7 +47,7 @@ public partial class MainWindow : Window
     private readonly Forms.NotifyIcon _trayIcon;
     private void SelectFile_OnClick(object sender, RoutedEventArgs e)
     {
-        var dialog = new OpenFileDialog
+        var dialog = new Microsoft.Win32.OpenFileDialog
         {
             Title = "Выберите изображение",
             CheckFileExists = true,
@@ -61,7 +61,7 @@ public partial class MainWindow : Window
 
     private void DropZone_OnDragOver(object sender, System.Windows.DragEventArgs e)
     {
-        e.Effects = e.Data.GetDataPresent(DataFormats.FileDrop) ? DragDropEffects.Copy : DragDropEffects.None;
+        e.Effects = e.Data.GetDataPresent(System.Windows.DataFormats.FileDrop) ? System.Windows.DragDropEffects.Copy : System.Windows.DragDropEffects.None;
         e.Handled = true;
     }
 
@@ -70,7 +70,7 @@ public partial class MainWindow : Window
         if (_isConverting || _isQueueRunning)
             return;
 
-        if (e.Data.GetData(DataFormats.FileDrop) is string[] { Length: > 0 } files)
+        if (e.Data.GetData(System.Windows.DataFormats.FileDrop) is string[] { Length: > 0 } files)
         {
             var firstFile = files.FirstOrDefault(File.Exists);
             if (firstFile is not null)
@@ -135,7 +135,7 @@ public partial class MainWindow : Window
         if (_isConverting || _isQueueRunning)
             return;
 
-        var dialog = new OpenFileDialog
+        var dialog = new Microsoft.Win32.OpenFileDialog
         {
             Title = "Добавить изображения в очередь",
             CheckFileExists = true,
