@@ -66,7 +66,7 @@ public sealed class WpfImageFormatHandler : IFormatHandler
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
-            progress?.Report(0.05);
+            progress?.Report(5);
 
             await Task.Run(() =>
             {
@@ -118,11 +118,11 @@ public sealed class WpfImageFormatHandler : IFormatHandler
             }, cancellationToken).ConfigureAwait(false);
 
             cancellationToken.ThrowIfCancellationRequested();
-            progress?.Report(0.9);
+            progress?.Report(90);
 
             // File.Move without overwrite is the final guard against destination races.
             File.Move(temporaryPath, request.DestinationPath);
-            progress?.Report(1);
+            progress?.Report(100);
             stopwatch.Stop();
             return ConversionResult.Success(request.DestinationPath, stopwatch.Elapsed);
         }

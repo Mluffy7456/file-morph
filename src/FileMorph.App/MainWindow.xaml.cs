@@ -91,7 +91,7 @@ public partial class MainWindow : Window
         var request = new ConversionRequest(sourcePath, destinationPath, ConversionOperation.Convert, outputFormat);
         var progress = new Progress<double>(value =>
         {
-            ConversionStatusText.Text = $"Выполняется конвертация… {value:P0}";
+            ConversionStatusText.Text = $"Выполняется конвертация… {value / 100d:P0}";
         });
 
         _isConverting = true;
