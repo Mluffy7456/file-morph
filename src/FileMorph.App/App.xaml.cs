@@ -1,5 +1,6 @@
 using System.IO;
 using MediaColor = System.Windows.Media.Color;
+using MediaSolidColorBrush = System.Windows.Media.SolidColorBrush;
 
 namespace FileMorph.App;
 
@@ -51,15 +52,15 @@ public partial class App : System.Windows.Application
         resources["SecondaryTextColor"] = ColorFromHex(isLight ? "#FF68707C" : "#FFA6A8AE");
 
         UpdateBrush("CanvasBrush", (MediaColor)resources["CanvasColor"]);
-        UpdateBrush("SurfaceBrush", (Color)resources["SurfaceColor"]);
-        UpdateBrush("BorderBrushSoft", (Color)resources["BorderColor"]);
-        UpdateBrush("PrimaryTextBrush", (Color)resources["PrimaryTextColor"]);
-        UpdateBrush("SecondaryTextBrush", (Color)resources["SecondaryTextColor"]);
+        UpdateBrush("SurfaceBrush", (MediaColor)resources["SurfaceColor"]);
+        UpdateBrush("BorderBrushSoft", (MediaColor)resources["BorderColor"]);
+        UpdateBrush("PrimaryTextBrush", (MediaColor)resources["PrimaryTextColor"]);
+        UpdateBrush("SecondaryTextBrush", (MediaColor)resources["SecondaryTextColor"]);
     }
 
     private static void UpdateBrush(string key, MediaColor color)
     {
-        if (Current.Resources[key] is SolidColorBrush brush)
+        if (Current.Resources[key] is MediaSolidColorBrush brush)
             brush.Color = color;
     }
 
