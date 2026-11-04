@@ -6,6 +6,8 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Drawing;
+using Forms = System.Windows.Forms;
 
 namespace FileMorph.App;
 
@@ -25,6 +27,14 @@ public partial class MainWindow : Window
         _queueService = new ConversionQueueService(_conversionService);
         _queueService.ItemChanged += QueueService_OnItemChanged;
         QueueListBox.ItemsSource = _queueItems;
+        _trayIcon = new Forms.NotifyIcon();
+        _trayIcon.Icon = SystemIcons.Application;
+        _trayIcon.Text = "FileMorph";
+        _trayIcon.Visible = true;
+        _trayIcon.ContextMenuStrip = new Forms.ContextMenuStrip();
+        _trayIcon.ContextMenuStrip.Items.Add("Открыть", null, (_, _) => Dispatcher.Invoke(() => { Show(); WindowState = WindowState.Normal; Activate(); }));
+        _trayIcon.ContextMenuStrip.Items.Add("Выход", null, (_, _) => Dispatcher.Invoke(() => { _allowClose = true; Close(); Application.Current.Shutdown(); }));
+        _trayIcon.DoubleClick += (_, _) => Dispatcher.Invoke(() => { Show(); WindowState = WindowState.Normal; Activate(); });
     }
 
     private void CompactMode_OnClick(object sender, RoutedEventArgs e) { FullLayout.Visibility = Visibility.Collapsed; CompactLayout.Visibility = Visibility.Visible; Width = 440; Height = 235; MinWidth = 390; MinHeight = 210; MaxWidth = 560; MaxHeight = 320; WindowState = WindowState.Normal; }
@@ -32,8 +42,9 @@ public partial class MainWindow : Window
     private void MiniSelectFile_OnClick(object sender, RoutedEventArgs e) => SelectFile_OnClick(sender, e);
     private void MiniConvert_OnClick(object sender, RoutedEventArgs e) { OutputFormatComboBox.SelectedIndex = MiniOutputFormatComboBox.SelectedIndex; Convert_OnClick(sender, e); }
     private void Window_StateChanged(object? sender, EventArgs e) { if (WindowState == WindowState.Minimized) Hide(); }
-    private void Window_Closing(object? sender, System.ComponentModel.CancelEventArgs e) { if (!_allowClose) { e.Cancel = true; Hide(); } }
+    private void Window_Closing(object? sender, System.ComponentModel.CancelEventArgs e) { if (!_allowClose) { e.Cancel = true; Hide(); } else { _trayIcon.Visible = false; _trayIcon.Dispose(); } }
     private bool _allowClose;
+    private readonly Forms.NotifyIcon _trayIcon;
     private void SelectFile_OnClick(object sender, RoutedEventArgs e)
     {
         var dialog = new OpenFileDialog
