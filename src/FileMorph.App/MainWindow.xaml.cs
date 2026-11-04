@@ -27,6 +27,13 @@ public partial class MainWindow : Window
         QueueListBox.ItemsSource = _queueItems;
     }
 
+    private void CompactMode_OnClick(object sender, RoutedEventArgs e) { FullLayout.Visibility = Visibility.Collapsed; CompactLayout.Visibility = Visibility.Visible; Width = 440; Height = 235; MinWidth = 390; MinHeight = 210; MaxWidth = 560; MaxHeight = 320; WindowState = WindowState.Normal; }
+    private void FullMode_OnClick(object sender, RoutedEventArgs e) { CompactLayout.Visibility = Visibility.Collapsed; FullLayout.Visibility = Visibility.Visible; MinWidth = 560; MinHeight = 520; MaxWidth = double.PositiveInfinity; MaxHeight = double.PositiveInfinity; Width = 1040; Height = 780; }
+    private void MiniSelectFile_OnClick(object sender, RoutedEventArgs e) => SelectFile_OnClick(sender, e);
+    private void MiniConvert_OnClick(object sender, RoutedEventArgs e) { OutputFormatComboBox.SelectedIndex = MiniOutputFormatComboBox.SelectedIndex; Convert_OnClick(sender, e); }
+    private void Window_StateChanged(object? sender, EventArgs e) { if (WindowState == WindowState.Minimized) Hide(); }
+    private void Window_Closing(object? sender, System.ComponentModel.CancelEventArgs e) { if (!_allowClose) { e.Cancel = true; Hide(); } }
+    private bool _allowClose;
     private void SelectFile_OnClick(object sender, RoutedEventArgs e)
     {
         var dialog = new OpenFileDialog
@@ -371,6 +378,7 @@ public partial class MainWindow : Window
     {
         _selectedFilePath = path;
         SelectedFileText.Text = path;
+        MiniSelectedFileText.Text = Path.GetFileName(path);
         SelectedFileText.ToolTip = path;
         ConversionStatusText.Text = "Готово к конвертации. Результат будет сохранён рядом с исходным файлом.";
     }
