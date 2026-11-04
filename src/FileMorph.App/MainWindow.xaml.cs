@@ -72,9 +72,17 @@ public partial class MainWindow : Window
 
         if (e.Data.GetData(System.Windows.DataFormats.FileDrop) is string[] { Length: > 0 } files)
         {
-            var firstFile = files.FirstOrDefault(File.Exists);
-            if (firstFile is not null)
-                SetSelectedFile(firstFile);
+            var validFiles = files
+                .Where(File.Exists)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+
+            if (validFiles.Length == 0)
+                return;
+
+            SetSelectedFile(validFiles[0]);
+            if (validFiles.Length > 1)
+                EnqueueFiles(validFiles, GetSelectedOutputFormat());
         }
     }
 

@@ -25,13 +25,9 @@ public sealed class ConversionQueueService(IConversionService conversionService)
     public Guid Enqueue(ConversionRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
-
-        var item = new ConversionQueueItem(
-            Guid.NewGuid(), request, ConversionQueueStatus.Queued, 0);
-
+        var item = new ConversionQueueItem(Guid.NewGuid(), request, ConversionQueueStatus.Queued, 0);
         lock (_sync)
             _items.Add(item);
-
         ItemChanged?.Invoke(item);
         return item.Id;
     }
@@ -44,10 +40,8 @@ public sealed class ConversionQueueService(IConversionService conversionService)
             removed = _items.FirstOrDefault(item => item.Id == id);
             if (removed is null || removed.Status != ConversionQueueStatus.Queued)
                 return false;
-
             _items.Remove(removed);
         }
-
         ItemChanged?.Invoke(removed with { Status = ConversionQueueStatus.Cancelled });
         return true;
     }
@@ -61,10 +55,10 @@ public sealed class ConversionQueueService(IConversionService conversionService)
             if (original is null || original.Status is not (ConversionQueueStatus.Failed or ConversionQueueStatus.Cancelled))
                 return false;
 
-            retry = new ConversionQueueItem(Guid.NewGuid(), original.Request, ConversionQueueStatus.Queued, 0);
+            var request = CreateRetryRequest(original.Request, _items);
+            retry = new ConversionQueueItem(Guid.NewGuid(), request, ConversionQueueStatus.Queued, 0);
             _items.Add(retry);
         }
-
         ItemChanged?.Invoke(retry);
         return true;
     }
@@ -78,10 +72,8 @@ public sealed class ConversionQueueService(IConversionService conversionService)
             foreach (var item in removed)
                 _items.Remove(item);
         }
-
         foreach (var item in removed)
             ItemChanged?.Invoke(item);
-
         return removed.Length;
     }
 
@@ -99,17 +91,17 @@ public sealed class ConversionQueueService(IConversionService conversionService)
             while (true)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-
                 ConversionQueueItem? next;
+                CancellationToken currentToken;
                 lock (_sync)
                 {
                     next = _items.FirstOrDefault(item => item.Status == ConversionQueueStatus.Queued);
                     if (next is null)
                         return;
-
                     next = next with { Status = ConversionQueueStatus.Running, Progress = 0 };
                     ReplaceItem(next);
                     _currentCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                    currentToken = _currentCancellation.Token;
                 }
 
                 ItemChanged?.Invoke(next);
@@ -125,16 +117,12 @@ public sealed class ConversionQueueService(IConversionService conversionService)
                             var current = _items.FirstOrDefault(item => item.Id == next.Id);
                             if (current is null || current.Status != ConversionQueueStatus.Running)
                                 return;
-
                             updated = current with { Progress = bounded };
                             ReplaceItem(updated);
                         }
-
                         ItemChanged?.Invoke(updated);
                     });
-
-                    result = await conversionService.ConvertAsync(
-                        next.Request, progress, _currentCancellation.Token).ConfigureAwait(false);
+                    result = await conversionService.ConvertAsync(next.Request, progress, currentToken).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -154,26 +142,15 @@ public sealed class ConversionQueueService(IConversionService conversionService)
                 {
                     var current = _items.First(item => item.Id == next.Id);
                     completed = result.Succeeded
-                        ? current with
-                        {
-                            Status = ConversionQueueStatus.Succeeded,
-                            Progress = 100,
-                            OutputPath = result.OutputPath,
-                            ErrorCode = null,
-                            ErrorMessage = null
-                        }
+                        ? current with { Status = ConversionQueueStatus.Succeeded, Progress = 100, OutputPath = result.OutputPath, ErrorCode = null, ErrorMessage = null }
                         : current with
                         {
-                            Status = result.ErrorCode == "cancelled"
-                                ? ConversionQueueStatus.Cancelled
-                                : ConversionQueueStatus.Failed,
+                            Status = result.ErrorCode == "cancelled" ? ConversionQueueStatus.Cancelled : ConversionQueueStatus.Failed,
                             ErrorCode = result.ErrorCode,
                             ErrorMessage = result.ErrorMessage
                         };
-
                     ReplaceItem(completed);
                 }
-
                 ItemChanged?.Invoke(completed);
             }
         }
@@ -181,6 +158,26 @@ public sealed class ConversionQueueService(IConversionService conversionService)
         {
             _runnerLock.Release();
         }
+    }
+
+    private static ConversionRequest CreateRetryRequest(ConversionRequest original, IReadOnlyCollection<ConversionQueueItem> items)
+    {
+        var directory = Path.GetDirectoryName(original.DestinationPath)
+            ?? throw new InvalidOperationException("The destination directory could not be determined.");
+        var extension = Path.GetExtension(original.DestinationPath);
+        var baseName = Path.GetFileNameWithoutExtension(original.DestinationPath);
+        var reserved = items.Select(item => item.Request.DestinationPath)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var suffix = 2;
+        string candidate;
+        do
+        {
+            candidate = Path.Combine(directory, $"{baseName}-retry-{suffix}{extension}");
+            suffix++;
+        }
+        while (File.Exists(candidate) || reserved.Contains(candidate));
+
+        return new ConversionRequest(original.SourcePath, candidate, original.Operation, original.OutputFormat);
     }
 
     private void ReplaceItem(ConversionQueueItem item)

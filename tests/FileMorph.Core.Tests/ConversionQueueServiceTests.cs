@@ -86,6 +86,27 @@ public sealed class ConversionQueueServiceTests
     }
 
     [Fact]
+    public async Task Retry_UsesFreshDestination_AndCanCompleteAfterPreviousFailure()
+    {
+        using var files = new TemporaryFiles();
+        var source = files.CreateFile("retry.png");
+        var conversion = new FakeConversionService { FailFirst = true };
+        var queue = new ConversionQueueService(conversion);
+        var originalId = queue.Enqueue(new ConversionRequest(source, files.PathFor("out.png"), ConversionOperation.Convert));
+        await queue.RunAsync();
+
+        Assert.True(queue.Retry(originalId));
+        var retry = queue.GetItems().Single(item => item.Id != originalId);
+        Assert.NotEqual(files.PathFor("out.png"), retry.Request.DestinationPath);
+        Assert.Equal(ConversionQueueStatus.Queued, retry.Status);
+
+        await queue.RunAsync();
+        retry = queue.GetItems().Single(item => item.Id != originalId);
+        Assert.Equal(ConversionQueueStatus.Succeeded, retry.Status);
+        Assert.True(File.Exists(retry.Request.DestinationPath));
+    }
+
+    [Fact]
     public async Task ClearCompleted_RemovesOnlyTerminalItems()
     {
         using var files = new TemporaryFiles();
