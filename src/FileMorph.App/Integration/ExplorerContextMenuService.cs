@@ -15,7 +15,7 @@ public sealed class ExplorerContextMenuService
     {
         using var key = Registry.CurrentUser.OpenSubKey(MenuKeyPath);
         var command = key?.OpenSubKey("command")?.GetValue(null) as string;
-        return string.Equals(command, BuildCommand(), StringComparison.OrdinalIgnoreCase);
+        return "\"" + executable + "\" \"%1\"";
     }
 
     public void Register()
