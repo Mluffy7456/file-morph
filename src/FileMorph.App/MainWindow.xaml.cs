@@ -138,6 +138,8 @@ public partial class MainWindow : Window
             if (result.Succeeded && result.OutputPath is not null)
             {
                 ConversionStatusText.Text = $"Готово: {result.OutputPath}";
+                _historyService.Add(new(DateTimeOffset.Now, sourcePath, result.OutputPath, true, null));
+                RefreshHistory();
                 SelectedFileText.ToolTip = sourcePath;
             }
             else
@@ -349,6 +351,12 @@ public partial class MainWindow : Window
     {
         Dispatcher.Invoke(() =>
         {
+            if (item.IsTerminal && _recordedHistoryItems.Add(item.Id))
+            {
+                _historyService.Add(new(DateTimeOffset.Now, item.Request.SourcePath, item.OutputPath ?? item.Request.DestinationPath,
+                    item.Status == ConversionQueueStatus.Succeeded, item.ErrorMessage ?? item.ErrorCode));
+                RefreshHistory();
+            }
             var existing = _queueItems.FirstOrDefault(entry => entry.Id == item.Id);
             var stillInQueue = _queueService.GetItems().Any(entry => entry.Id == item.Id);
 
@@ -378,6 +386,18 @@ public partial class MainWindow : Window
             UpdateRemoveQueueItemButton();
             UpdateQueueSelectionDetails();
         });
+    }
+
+    private void RefreshHistory()
+    {
+        HistoryListBox.ItemsSource = _historyService.GetEntries();
+        ClearHistoryButton.IsEnabled = _historyService.GetEntries().Count > 0;
+    }
+
+    private void ClearHistory_OnClick(object sender, RoutedEventArgs e)
+    {
+        _historyService.Clear();
+        RefreshHistory();
     }
 
     private void UpdateQueueProgress()
