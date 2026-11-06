@@ -1,6 +1,6 @@
 using FileMorph.App.Conversion;
 using FileMorph.Core.Models;
-using FileMorph.Infrastructure.Conversion;
+using FileMorph.Infrastructure.Conversion;\nusing FileMorph.App.History;
 using Microsoft.Win32;
 using System.Collections.ObjectModel;
 using System.IO;
@@ -14,7 +14,7 @@ namespace FileMorph.App;
 public partial class MainWindow : Window
 {
     private readonly ConversionService _conversionService = new([new WpfImageFormatHandler()]);
-    private readonly ConversionQueueService _queueService;
+    private readonly ConversionQueueService _queueService;\n    private readonly ConversionHistoryService _historyService = new();\n    private readonly HashSet<Guid> _recordedHistoryItems = [];
     private readonly ObservableCollection<QueueDisplayItem> _queueItems = [];
     private CancellationTokenSource? _queueRunCancellation;
     private string? _selectedFilePath;
@@ -30,7 +30,7 @@ public partial class MainWindow : Window
         QualityValueText.Text = $"{QualitySlider.Value:0}%";
         _queueService = new ConversionQueueService(_conversionService);
         _queueService.ItemChanged += QueueService_OnItemChanged;
-        QueueListBox.ItemsSource = _queueItems;
+        QueueListBox.ItemsSource = _queueItems;\n        HistoryListBox.ItemsSource = _historyService.GetEntries();\n        ClearHistoryButton.IsEnabled = _historyService.GetEntries().Count > 0;
         _trayIcon = new Forms.NotifyIcon();
         _trayIcon.Icon = SystemIcons.Application;
         _trayIcon.Text = "FileMorph";
@@ -143,6 +143,8 @@ public partial class MainWindow : Window
             else
             {
                 ConversionStatusText.Text = $"Не удалось выполнить конвертацию: {result.ErrorMessage ?? result.ErrorCode ?? "неизвестная ошибка"}";
+                _historyService.Add(new(DateTimeOffset.Now, sourcePath, destinationPath, false, result.ErrorMessage ?? result.ErrorCode));
+                RefreshHistory();
             }
         }
         catch (Exception exception)
