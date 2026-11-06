@@ -295,8 +295,7 @@ public partial class MainWindow : Window
             ConversionQueueStatus.Failed => $"Код: {item.ErrorCode ?? "не указан"} · {item.ErrorMessage ?? "Подробности отсутствуют."}",
             ConversionQueueStatus.Cancelled => "Операция была отменена.",
             ConversionQueueStatus.Succeeded => $"Результат: {item.OutputPath ?? "путь не указан"}",
-            _ => $"Источник: {item.Request.SourcePath}
-Результат: {item.Request.DestinationPath}"
+            _ => $"Источник: {item.Request.SourcePath}\nРезультат: {item.Request.DestinationPath}"
         };
     }
 
