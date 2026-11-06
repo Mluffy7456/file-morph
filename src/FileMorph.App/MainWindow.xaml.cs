@@ -3,6 +3,7 @@ using FileMorph.Core.Models;
 using FileMorph.Infrastructure.Conversion;
 using FileMorph.App.History;
 using FileMorph.App.Presets;
+using FileMorph.App.Integration;
 using Microsoft.Win32;
 using System.Collections.ObjectModel;
 using System.IO;
@@ -19,6 +20,7 @@ public partial class MainWindow : Window
     private readonly ConversionQueueService _queueService;
     private readonly ConversionHistoryService _historyService = new();
     private readonly ConversionPresetService _presetService = new();
+    private readonly ExplorerContextMenuService _explorerContextMenu = new();
     private readonly HashSet<Guid> _recordedHistoryItems = [];
     private readonly ObservableCollection<QueueDisplayItem> _queueItems = [];
     private CancellationTokenSource? _queueRunCancellation;
@@ -484,6 +486,44 @@ public partial class MainWindow : Window
     {
         PresetComboBox.ItemsSource = _presetService.GetAll();
         PresetComboBox.SelectedItem = null;
+    }
+
+    private void RegisterExplorer_OnClick(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            _explorerContextMenu.Register();
+            RefreshExplorerIntegrationState();
+            ConversionStatusText.Text = "Пункт «Convert with FileMorph» добавлен в контекстное меню изображений Проводника для текущего пользователя.";
+        }
+        catch (Exception exception) when (exception is UnauthorizedAccessException or IOException or InvalidOperationException or PlatformNotSupportedException)
+        {
+            ConversionStatusText.Text = $"Не удалось добавить пункт в Проводник: {exception.Message}";
+        }
+    }
+
+    private void UnregisterExplorer_OnClick(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            _explorerContextMenu.Unregister();
+            RefreshExplorerIntegrationState();
+            ConversionStatusText.Text = "Интеграция FileMorph с Проводником отключена.";
+        }
+        catch (Exception exception) when (exception is UnauthorizedAccessException or IOException or InvalidOperationException or PlatformNotSupportedException)
+        {
+            ConversionStatusText.Text = $"Не удалось удалить пункт из Проводника: {exception.Message}";
+        }
+    }
+
+    private void RefreshExplorerIntegrationState()
+    {
+        var registered = OperatingSystem.IsWindows() && _explorerContextMenu.IsRegistered();
+        RegisterExplorerButton.IsEnabled = !registered;
+        UnregisterExplorerButton.IsEnabled = registered;
+        ExplorerIntegrationStatusText.Text = registered
+            ? "Интеграция включена для текущего пользователя"
+            : "Интеграция не включена";
     }
 
     private void ClearHistory_OnClick(object sender, RoutedEventArgs e)
