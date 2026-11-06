@@ -26,7 +26,7 @@ public partial class MainWindow : Window
     private bool _isConverting;
     private bool _isQueueRunning;
 
-    public MainWindow()
+    public MainWindow(IEnumerable<string>? initialFiles = null)
     {
         InitializeComponent();
         _isLightTheme = App.LoadThemePreference();
@@ -38,6 +38,7 @@ public partial class MainWindow : Window
         QueueListBox.ItemsSource = _queueItems;
         HistoryListBox.ItemsSource = _historyService.GetEntries();
         RefreshPresets();
+        RefreshExplorerIntegrationState();
         ClearHistoryButton.IsEnabled = _historyService.GetEntries().Count > 0;
         _trayIcon = new Forms.NotifyIcon();
         _trayIcon.Icon = SystemIcons.Application;
@@ -48,6 +49,16 @@ public partial class MainWindow : Window
         _trayIcon.ContextMenuStrip.Items.Add("Сменить тему", null, (_, _) => Dispatcher.Invoke(ToggleTheme));
         _trayIcon.ContextMenuStrip.Items.Add("Выход", null, (_, _) => Dispatcher.Invoke(() => { _allowClose = true; Close(); System.Windows.Application.Current.Shutdown(); }));
         _trayIcon.DoubleClick += (_, _) => Dispatcher.Invoke(() => { Show(); WindowState = WindowState.Normal; Activate(); });
+        if (initialFiles is not null)
+        {
+            var files = initialFiles.Where(File.Exists).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+            if (files.Length > 0)
+            {
+                SetSelectedFile(files[0]);
+                if (files.Length > 1)
+                    EnqueueFiles(files, GetSelectedOutputFormat());
+            }
+        }
     }
 
     private bool _isLightTheme;
