@@ -1,6 +1,7 @@
 using FileMorph.App.Conversion;
 using FileMorph.Core.Models;
-using FileMorph.Infrastructure.Conversion;\nusing FileMorph.App.History;
+using FileMorph.Infrastructure.Conversion;
+using FileMorph.App.History;
 using Microsoft.Win32;
 using System.Collections.ObjectModel;
 using System.IO;
@@ -14,7 +15,9 @@ namespace FileMorph.App;
 public partial class MainWindow : Window
 {
     private readonly ConversionService _conversionService = new([new WpfImageFormatHandler()]);
-    private readonly ConversionQueueService _queueService;\n    private readonly ConversionHistoryService _historyService = new();\n    private readonly HashSet<Guid> _recordedHistoryItems = [];
+    private readonly ConversionQueueService _queueService;
+    private readonly ConversionHistoryService _historyService = new();
+    private readonly HashSet<Guid> _recordedHistoryItems = [];
     private readonly ObservableCollection<QueueDisplayItem> _queueItems = [];
     private CancellationTokenSource? _queueRunCancellation;
     private string? _selectedFilePath;
@@ -30,7 +33,9 @@ public partial class MainWindow : Window
         QualityValueText.Text = $"{QualitySlider.Value:0}%";
         _queueService = new ConversionQueueService(_conversionService);
         _queueService.ItemChanged += QueueService_OnItemChanged;
-        QueueListBox.ItemsSource = _queueItems;\n        HistoryListBox.ItemsSource = _historyService.GetEntries();\n        ClearHistoryButton.IsEnabled = _historyService.GetEntries().Count > 0;
+        QueueListBox.ItemsSource = _queueItems;
+        HistoryListBox.ItemsSource = _historyService.GetEntries();
+        ClearHistoryButton.IsEnabled = _historyService.GetEntries().Count > 0;
         _trayIcon = new Forms.NotifyIcon();
         _trayIcon.Icon = SystemIcons.Application;
         _trayIcon.Text = "FileMorph";
@@ -290,7 +295,8 @@ public partial class MainWindow : Window
             ConversionQueueStatus.Failed => $"Код: {item.ErrorCode ?? "не указан"} · {item.ErrorMessage ?? "Подробности отсутствуют."}",
             ConversionQueueStatus.Cancelled => "Операция была отменена.",
             ConversionQueueStatus.Succeeded => $"Результат: {item.OutputPath ?? "путь не указан"}",
-            _ => $"Источник: {item.Request.SourcePath}\nРезультат: {item.Request.DestinationPath}"
+            _ => $"Источник: {item.Request.SourcePath}
+Результат: {item.Request.DestinationPath}"
         };
     }
 
