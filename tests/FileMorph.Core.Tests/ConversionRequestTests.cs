@@ -46,6 +46,43 @@ public sealed class ConversionRequestTests
     }
 
     [Fact]
+    public void Constructor_PreservesResizeDimensions()
+    {
+        var request = new ConversionRequest(
+            Path.Combine(Path.GetTempPath(), "source.png"),
+            Path.Combine(Path.GetTempPath(), "destination.png"),
+            ConversionOperation.Resize,
+            targetWidth: 800,
+            targetHeight: 600);
+        Assert.Equal(800, request.TargetWidth);
+        Assert.Equal(600, request.TargetHeight);
+    }
+
+    [Theory]
+    [InlineData(0, null)]
+    [InlineData(20001, null)]
+    [InlineData(null, 0)]
+    [InlineData(null, 20001)]
+    public void Constructor_RejectsInvalidResizeDimensions(int? width, int? height)
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => new ConversionRequest(
+            Path.Combine(Path.GetTempPath(), "source.png"),
+            Path.Combine(Path.GetTempPath(), "destination.png"),
+            ConversionOperation.Convert,
+            targetWidth: width,
+            targetHeight: height));
+    }
+
+    [Fact]
+    public void Constructor_ResizeRequiresAtLeastOneDimension()
+    {
+        Assert.Throws<ArgumentException>(() => new ConversionRequest(
+            Path.Combine(Path.GetTempPath(), "source.png"),
+            Path.Combine(Path.GetTempPath(), "destination.png"),
+            ConversionOperation.Resize));
+    }
+
+    [Fact]
     public void Constructor_DerivesOutputFormatFromDestination()
     {
         var request = new ConversionRequest(Path.Combine(Path.GetTempPath(), "sample.png"), Path.Combine(Path.GetTempPath(), "sample.jpg"), ConversionOperation.Convert);
