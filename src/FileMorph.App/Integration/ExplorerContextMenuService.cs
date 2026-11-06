@@ -14,8 +14,9 @@ public sealed class ExplorerContextMenuService
     public bool IsRegistered()
     {
         using var key = Registry.CurrentUser.OpenSubKey(MenuKeyPath);
-        var command = key?.OpenSubKey("command")?.GetValue(null) as string;
-        return "\"" + executable + "\" \"%1\"";
+        using var commandKey = key?.OpenSubKey("command");
+        var command = commandKey?.GetValue(null) as string;
+        return string.Equals(command, BuildCommand(), StringComparison.OrdinalIgnoreCase);
     }
 
     public void Register()
@@ -42,6 +43,6 @@ public sealed class ExplorerContextMenuService
     private static string BuildCommand()
     {
         var executable = Path.Combine(AppContext.BaseDirectory, "FileMorph.exe");
-        return $"\\"{executable}\\" \\"%1\\"";
+        return "\"" + executable + "\" \"%1\"";
     }
 }
