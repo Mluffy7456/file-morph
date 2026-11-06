@@ -38,7 +38,7 @@ public sealed class WpfImageFormatHandler : IFormatHandler
         var scale = GetScale(bitmap.Width, bitmap.Height, targetWidth, targetHeight);
         var width = Math.Max(1, (int)Math.Round(bitmap.Width * scale));
         var height = Math.Max(1, (int)Math.Round(bitmap.Height * scale));
-        return bitmap.Resize(new SKImageInfo(width, height), SKFilterQuality.High)
+        return bitmap.Resize(new SKImageInfo(width, height), new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear))
             ?? throw new InvalidDataException("Could not resize the source image.");
     }
 
@@ -129,7 +129,7 @@ public sealed class WpfImageFormatHandler : IFormatHandler
                     throw new InvalidDataException("The source does not contain a readable image frame.");
 
                 var encoder = createEncoder!(request.Quality);
-                var frame = decoder.Frames[0];
+                BitmapSource frame = decoder.Frames[0];
                 if (request.TargetWidth.HasValue || request.TargetHeight.HasValue)
                 {
                     var scale = GetScale(frame.PixelWidth, frame.PixelHeight, request.TargetWidth, request.TargetHeight);
