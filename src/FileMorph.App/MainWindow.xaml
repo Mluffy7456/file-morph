@@ -15,6 +15,13 @@
     <Slider x:Name="QualitySlider" Minimum="1" Maximum="100" Value="90" Width="180" TickFrequency="1" IsSnapToTickEnabled="False" ValueChanged="QualitySlider_OnValueChanged"/>
     <TextBlock x:Name="QualityValueText" Text="90%" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="{StaticResource SecondaryTextBrush}"/>
 </StackPanel>
+<WrapPanel Margin="0,12,0,0" VerticalAlignment="Center">
+    <TextBox x:Name="PresetNameTextBox" Width="150" Height="36" Padding="8,6" Margin="0,0,8,8" VerticalContentAlignment="Center" Background="{DynamicResource SurfaceBrush}" Foreground="{DynamicResource PrimaryTextBrush}" BorderBrush="{DynamicResource BorderBrushSoft}" ToolTip="Название нового пресета" />
+    <Button Content="Сохранить пресет" Click="SavePreset_OnClick"/>
+    <ComboBox x:Name="PresetComboBox" Width="180" Margin="0,0,8,8" DisplayMemberPath="Name" ToolTip="Сохранённые пресеты"/>
+    <Button Content="Применить" Click="ApplyPreset_OnClick"/>
+    <Button Content="Удалить" Click="DeletePreset_OnClick" Margin="0,0,0,8"/>
+</WrapPanel>
 <TextBlock x:Name="ConversionStatusText" Margin="0,12,0,0" Foreground="{StaticResource SecondaryTextBrush}" Text="Поддерживаются PNG, JPEG, BMP, TIFF, GIF и WebP. Анимированные файлы сохраняются первым кадром." TextWrapping="Wrap"/></StackPanel></Border>
 <Border Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" CornerRadius="16" Padding="22"><StackPanel><DockPanel LastChildFill="False"><StackPanel DockPanel.Dock="Left"><TextBlock FontSize="18" FontWeight="SemiBold" Text="Очередь конвертации"/><TextBlock Margin="0,3,0,0" Foreground="{StaticResource SecondaryTextBrush}" Text="Пакетная обработка нескольких изображений"/></StackPanel><StackPanel DockPanel.Dock="Right" Orientation="Horizontal"><Button x:Name="RunQueueButton" Content="Запустить" Click="RunQueue_OnClick" IsEnabled="False" Margin="0"/><Button x:Name="CancelQueueButton" Content="Отменить" Click="CancelQueue_OnClick" IsEnabled="False" Margin="8,0,0,0"/></StackPanel></DockPanel>
 <WrapPanel Margin="0,14,0,8"><Button x:Name="AddToQueueButton" Content="Добавить выбранный" Click="AddToQueue_OnClick"/><Button x:Name="AddFilesToQueueButton" Content="Добавить несколько…" Click="AddFilesToQueue_OnClick"/><Button x:Name="RemoveQueueItemButton" Content="Удалить" Click="RemoveQueueItem_OnClick" IsEnabled="False"/><Button x:Name="RetryQueueItemButton" Content="Повторить" Click="RetryQueueItem_OnClick" IsEnabled="False"/><Button x:Name="ClearCompletedButton" Content="Очистить готовые" Click="ClearCompleted_OnClick" IsEnabled="False"/></WrapPanel>
