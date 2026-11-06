@@ -1,7 +1,7 @@
 <Application x:Class="FileMorph.App.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             StartupUri="MainWindow.xaml">
+             >
     <Application.Resources>
         <Color x:Key="CanvasColor">#FF111214</Color>
         <Color x:Key="SurfaceColor">#FF1B1D21</Color>
