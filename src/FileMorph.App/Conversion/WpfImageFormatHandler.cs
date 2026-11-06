@@ -29,7 +29,25 @@ public sealed class WpfImageFormatHandler : IFormatHandler
         "builtin-wic-raster",
         ["png", "jpg", "jpeg", "bmp", "gif", "tif", "tiff", "webp"],
         ["png", "jpg", "jpeg", "bmp", "gif", "tif", "tiff", "webp"],
-        [ConversionOperation.Convert]);
+        [ConversionOperation.Convert, ConversionOperation.Resize]);
+
+    private static SKBitmap? ResizeBitmap(SKBitmap bitmap, int? targetWidth, int? targetHeight)
+    {
+        if (!targetWidth.HasValue && !targetHeight.HasValue)
+            return null;
+        var scale = GetScale(bitmap.Width, bitmap.Height, targetWidth, targetHeight);
+        var width = Math.Max(1, (int)Math.Round(bitmap.Width * scale));
+        var height = Math.Max(1, (int)Math.Round(bitmap.Height * scale));
+        return bitmap.Resize(new SKImageInfo(width, height), SKFilterQuality.High)
+            ?? throw new InvalidDataException("Could not resize the source image.");
+    }
+
+    private static double GetScale(int sourceWidth, int sourceHeight, int? targetWidth, int? targetHeight)
+    {
+        var widthScale = targetWidth.HasValue ? (double)targetWidth.Value / sourceWidth : double.PositiveInfinity;
+        var heightScale = targetHeight.HasValue ? (double)targetHeight.Value / sourceHeight : double.PositiveInfinity;
+        return Math.Min(widthScale, heightScale);
+    }
 
     public async Task<ConversionResult> ExecuteAsync(
         ConversionRequest request,
@@ -76,7 +94,8 @@ public sealed class WpfImageFormatHandler : IFormatHandler
                 {
                     using var bitmap = SKBitmap.Decode(request.SourcePath)
                         ?? throw new InvalidDataException("The source is not a supported or readable raster image.");
-                    using var image = SKImage.FromBitmap(bitmap);
+                    using var resizedBitmap = ResizeBitmap(bitmap, request.TargetWidth, request.TargetHeight);
+                    using var image = SKImage.FromBitmap(resizedBitmap ?? bitmap);
                     using var encoded = image.Encode(SKEncodedImageFormat.Webp, request.Quality)
                         ?? throw new InvalidDataException("WebP encoding failed.");
                     using var webpOutputStream = new FileStream(temporaryPath, FileMode.CreateNew, FileAccess.Write, FileShare.None);
@@ -110,7 +129,15 @@ public sealed class WpfImageFormatHandler : IFormatHandler
                     throw new InvalidDataException("The source does not contain a readable image frame.");
 
                 var encoder = createEncoder!(request.Quality);
-                encoder.Frames.Add(BitmapFrame.Create(decoder.Frames[0]));
+                var frame = decoder.Frames[0];
+                if (request.TargetWidth.HasValue || request.TargetHeight.HasValue)
+                {
+                    var scale = GetScale(frame.PixelWidth, frame.PixelHeight, request.TargetWidth, request.TargetHeight);
+                    var transformed = new TransformedBitmap(frame, new System.Windows.Media.ScaleTransform(scale, scale));
+                    transformed.Freeze();
+                    frame = transformed;
+                }
+                encoder.Frames.Add(BitmapFrame.Create(frame));
                 using var outputStream = new FileStream(temporaryPath, FileMode.CreateNew, FileAccess.Write, FileShare.None,
                     bufferSize: 64 * 1024, FileOptions.SequentialScan);
                 encoder.Save(outputStream);
