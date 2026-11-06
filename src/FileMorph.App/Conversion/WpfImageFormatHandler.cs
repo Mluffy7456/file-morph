@@ -1,0 +1,185 @@
+using System.Diagnostics;
+using System.IO;
+using System.Windows.Media.Imaging;
+using SkiaSharp;
+using FileMorph.Core.Abstractions;
+using FileMorph.Core.Models;
+
+namespace FileMorph.App.Conversion;
+
+/// <summary>
+/// Converts common raster formats using the Windows Imaging Component available through WPF.
+/// This handler is intentionally limited to formats supported by the built-in WPF encoders.
+/// </summary>
+public sealed class WpfImageFormatHandler : IFormatHandler
+{
+    private static readonly IReadOnlyDictionary<string, Func<int, BitmapEncoder>> Encoders =
+        new Dictionary<string, Func<int, BitmapEncoder>>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["png"] = static _ => new PngBitmapEncoder(),
+            ["jpg"] = static quality => new JpegBitmapEncoder { QualityLevel = quality },
+            ["jpeg"] = static quality => new JpegBitmapEncoder { QualityLevel = quality },
+            ["bmp"] = static _ => new BmpBitmapEncoder(),
+            ["gif"] = static _ => new GifBitmapEncoder(),
+            ["tif"] = static _ => new TiffBitmapEncoder(),
+            ["tiff"] = static _ => new TiffBitmapEncoder()
+        };
+
+    public FormatCapabilities Capabilities { get; } = new(
+        "builtin-wic-raster",
+        ["png", "jpg", "jpeg", "bmp", "gif", "tif", "tiff", "webp"],
+        ["png", "jpg", "jpeg", "bmp", "gif", "tif", "tiff", "webp"],
+        [ConversionOperation.Convert, ConversionOperation.Resize]);
+
+    private static SKBitmap? ResizeBitmap(SKBitmap bitmap, int? targetWidth, int? targetHeight)
+    {
+        if (!targetWidth.HasValue && !targetHeight.HasValue)
+            return null;
+        var scale = GetScale(bitmap.Width, bitmap.Height, targetWidth, targetHeight);
+        var width = Math.Max(1, (int)Math.Round(bitmap.Width * scale));
+        var height = Math.Max(1, (int)Math.Round(bitmap.Height * scale));
+        return bitmap.Resize(new SKImageInfo(width, height), new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear))
+            ?? throw new InvalidDataException("Could not resize the source image.");
+    }
+
+    private static double GetScale(int sourceWidth, int sourceHeight, int? targetWidth, int? targetHeight)
+    {
+        var widthScale = targetWidth.HasValue ? (double)targetWidth.Value / sourceWidth : double.PositiveInfinity;
+        var heightScale = targetHeight.HasValue ? (double)targetHeight.Value / sourceHeight : double.PositiveInfinity;
+        return Math.Min(widthScale, heightScale);
+    }
+
+    public async Task<ConversionResult> ExecuteAsync(
+        ConversionRequest request,
+        IProgress<double>? progress,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var stopwatch = Stopwatch.StartNew();
+
+        var isWebpInput = Path.GetExtension(request.SourcePath).Equals(".webp", StringComparison.OrdinalIgnoreCase);
+        var isWebpOutput = request.OutputFormat.Equals("webp", StringComparison.OrdinalIgnoreCase);
+        Func<int, BitmapEncoder>? createEncoder = null;
+        if (!isWebpOutput && !Encoders.TryGetValue(request.OutputFormat, out createEncoder))
+            return ConversionResult.Failure(
+                "unsupported_output_format",
+                $"The built-in image engine cannot write '{request.OutputFormat}'.",
+                stopwatch.Elapsed);
+
+        if (!File.Exists(request.SourcePath))
+            return ConversionResult.Failure("source_not_found", "The source file does not exist.", stopwatch.Elapsed);
+
+        var destinationDirectory = Path.GetDirectoryName(request.DestinationPath);
+        if (string.IsNullOrWhiteSpace(destinationDirectory) || !Directory.Exists(destinationDirectory))
+            return ConversionResult.Failure("destination_directory_missing", "The destination folder does not exist.", stopwatch.Elapsed);
+
+        if (File.Exists(request.DestinationPath))
+            return ConversionResult.Failure("destination_exists", "The destination already exists. Choose another output path.", stopwatch.Elapsed);
+
+        var temporaryPath = Path.Combine(
+            destinationDirectory,
+            $".filemorph-{Guid.NewGuid():N}.tmp");
+        var intermediatePath = Path.Combine(destinationDirectory, $".filemorph-{Guid.NewGuid():N}.png");
+
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            progress?.Report(5);
+
+            await Task.Run(() =>
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                if (isWebpOutput)
+                {
+                    using var bitmap = SKBitmap.Decode(request.SourcePath)
+                        ?? throw new InvalidDataException("The source is not a supported or readable raster image.");
+                    using var resizedBitmap = ResizeBitmap(bitmap, request.TargetWidth, request.TargetHeight);
+                    using var image = SKImage.FromBitmap(resizedBitmap ?? bitmap);
+                    using var encoded = image.Encode(SKEncodedImageFormat.Webp, request.Quality)
+                        ?? throw new InvalidDataException("WebP encoding failed.");
+                    using var webpOutputStream = new FileStream(temporaryPath, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+                    encoded.SaveTo(webpOutputStream);
+                    webpOutputStream.Flush(flushToDisk: true);
+                    return;
+                }
+
+                var decodePath = request.SourcePath;
+                if (isWebpInput)
+                {
+                    using var bitmap = SKBitmap.Decode(request.SourcePath)
+                        ?? throw new InvalidDataException("The WebP source is invalid or cannot be decoded.");
+                    using var image = SKImage.FromBitmap(bitmap);
+                    using var png = image.Encode(SKEncodedImageFormat.Png, 100)
+                        ?? throw new InvalidDataException("Could not prepare the WebP image for conversion.");
+                    using var intermediateStream = new FileStream(intermediatePath, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+                    png.SaveTo(intermediateStream);
+                    intermediateStream.Flush(flushToDisk: true);
+                    decodePath = intermediatePath;
+                }
+
+                using var sourceStream = new FileStream(
+                    decodePath, FileMode.Open, FileAccess.Read, FileShare.Read,
+                    bufferSize: 64 * 1024, FileOptions.SequentialScan);
+                var decoder = BitmapDecoder.Create(
+                    sourceStream,
+                    BitmapCreateOptions.PreservePixelFormat,
+                    BitmapCacheOption.OnLoad);
+                if (decoder.Frames.Count == 0)
+                    throw new InvalidDataException("The source does not contain a readable image frame.");
+
+                var encoder = createEncoder!(request.Quality);
+                BitmapSource frame = decoder.Frames[0];
+                if (request.TargetWidth.HasValue || request.TargetHeight.HasValue)
+                {
+                    var scale = GetScale(frame.PixelWidth, frame.PixelHeight, request.TargetWidth, request.TargetHeight);
+                    var transformed = new TransformedBitmap(frame, new System.Windows.Media.ScaleTransform(scale, scale));
+                    transformed.Freeze();
+                    frame = transformed;
+                }
+                encoder.Frames.Add(BitmapFrame.Create(frame));
+                using var outputStream = new FileStream(temporaryPath, FileMode.CreateNew, FileAccess.Write, FileShare.None,
+                    bufferSize: 64 * 1024, FileOptions.SequentialScan);
+                encoder.Save(outputStream);
+                outputStream.Flush(flushToDisk: true);
+            }, cancellationToken).ConfigureAwait(false);
+
+            cancellationToken.ThrowIfCancellationRequested();
+            progress?.Report(90);
+
+            // File.Move without overwrite is the final guard against destination races.
+            File.Move(temporaryPath, request.DestinationPath);
+            progress?.Report(100);
+            stopwatch.Stop();
+            return ConversionResult.Success(request.DestinationPath, stopwatch.Elapsed);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            stopwatch.Stop();
+            return ConversionResult.Failure("cancelled", "The operation was cancelled.", stopwatch.Elapsed);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException or NotSupportedException or System.Runtime.InteropServices.COMException)
+        {
+            stopwatch.Stop();
+            return ConversionResult.Failure("image_conversion_failed", exception.Message, stopwatch.Elapsed);
+        }
+        finally
+        {
+            try
+            {
+                if (File.Exists(temporaryPath))
+                    File.Delete(temporaryPath);
+                if (File.Exists(intermediatePath))
+                    File.Delete(intermediatePath);
+            }
+            catch (IOException)
+            {
+                // Cleanup is best-effort; never replace the original conversion error.
+            }
+            catch (UnauthorizedAccessException)
+            {
+                // Cleanup is best-effort; never replace the original conversion error.
+            }
+        }
+    }
+}
