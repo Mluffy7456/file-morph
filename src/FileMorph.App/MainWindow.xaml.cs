@@ -2,6 +2,7 @@ using FileMorph.App.Conversion;
 using FileMorph.Core.Models;
 using FileMorph.Infrastructure.Conversion;
 using FileMorph.App.History;
+using FileMorph.App.Presets;
 using Microsoft.Win32;
 using System.Collections.ObjectModel;
 using System.IO;
@@ -17,6 +18,7 @@ public partial class MainWindow : Window
     private readonly ConversionService _conversionService = new([new WpfImageFormatHandler()]);
     private readonly ConversionQueueService _queueService;
     private readonly ConversionHistoryService _historyService = new();
+    private readonly ConversionPresetService _presetService = new();
     private readonly HashSet<Guid> _recordedHistoryItems = [];
     private readonly ObservableCollection<QueueDisplayItem> _queueItems = [];
     private CancellationTokenSource? _queueRunCancellation;
@@ -35,6 +37,7 @@ public partial class MainWindow : Window
         _queueService.ItemChanged += QueueService_OnItemChanged;
         QueueListBox.ItemsSource = _queueItems;
         HistoryListBox.ItemsSource = _historyService.GetEntries();
+        RefreshPresets();
         ClearHistoryButton.IsEnabled = _historyService.GetEntries().Count > 0;
         _trayIcon = new Forms.NotifyIcon();
         _trayIcon.Icon = SystemIcons.Application;
@@ -397,6 +400,68 @@ public partial class MainWindow : Window
     {
         HistoryListBox.ItemsSource = _historyService.GetEntries();
         ClearHistoryButton.IsEnabled = _historyService.GetEntries().Count > 0;
+    }
+
+
+    private void SavePreset_OnClick(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(PresetNameTextBox.Text))
+                throw new ArgumentException("Введите название пресета.");
+            _presetService.Save(PresetNameTextBox.Text, GetSelectedOutputFormat(), (int)QualitySlider.Value);
+            RefreshPresets();
+            PresetComboBox.SelectedItem = _presetService.GetAll()
+                .FirstOrDefault(p => string.Equals(p.Name, PresetNameTextBox.Text.Trim(), StringComparison.OrdinalIgnoreCase));
+            ConversionStatusText.Text = "Пресет сохранён на этом компьютере.";
+        }
+        catch (Exception exception) when (exception is ArgumentException or ArgumentOutOfRangeException)
+        {
+            ConversionStatusText.Text = $"Не удалось сохранить пресет: {exception.Message}";
+        }
+    }
+
+    private void ApplyPreset_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (PresetComboBox.SelectedItem is not ConversionPreset preset)
+        {
+            ConversionStatusText.Text = "Сначала выберите пресет.";
+            return;
+        }
+
+        var formatItem = OutputFormatComboBox.Items.OfType<ComboBoxItem>()
+            .FirstOrDefault(item => string.Equals(item.Tag?.ToString(), preset.OutputFormat, StringComparison.OrdinalIgnoreCase));
+        if (formatItem is null)
+        {
+            ConversionStatusText.Text = "Формат пресета больше не поддерживается.";
+            return;
+        }
+
+        OutputFormatComboBox.SelectedItem = formatItem;
+        MiniOutputFormatComboBox.SelectedIndex = OutputFormatComboBox.SelectedIndex;
+        QualitySlider.Value = preset.Quality;
+        ConversionStatusText.Text = $"Применён пресет «{preset.Name}»: {preset.OutputFormat.ToUpperInvariant()}, {preset.Quality}%.";
+    }
+
+    private void DeletePreset_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (PresetComboBox.SelectedItem is not ConversionPreset preset)
+        {
+            ConversionStatusText.Text = "Выберите пресет для удаления.";
+            return;
+        }
+
+        if (_presetService.Delete(preset.Name))
+        {
+            RefreshPresets();
+            ConversionStatusText.Text = $"Пресет «{preset.Name}» удалён.";
+        }
+    }
+
+    private void RefreshPresets()
+    {
+        PresetComboBox.ItemsSource = _presetService.GetAll();
+        PresetComboBox.SelectedItem = null;
     }
 
     private void ClearHistory_OnClick(object sender, RoutedEventArgs e)
