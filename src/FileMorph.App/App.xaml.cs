@@ -9,6 +9,19 @@ public partial class App : System.Windows.Application
 {
     private sealed record UserSettings(string Theme);
 
+    protected override void OnStartup(System.Windows.StartupEventArgs e)
+    {
+        base.OnStartup(e);
+        var initialFiles = e.Args
+            .Where(argument => !argument.StartsWith("--", StringComparison.Ordinal))
+            .Where(File.Exists)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var window = new MainWindow(initialFiles);
+        MainWindow = window;
+        window.Show();
+    }
+
     public static bool LoadThemePreference()
     {
         try
