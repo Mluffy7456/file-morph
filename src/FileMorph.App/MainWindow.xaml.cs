@@ -415,7 +415,7 @@ public partial class MainWindow : Window
                 .FirstOrDefault(p => string.Equals(p.Name, PresetNameTextBox.Text.Trim(), StringComparison.OrdinalIgnoreCase));
             ConversionStatusText.Text = "Пресет сохранён на этом компьютере.";
         }
-        catch (Exception exception) when (exception is ArgumentException or ArgumentOutOfRangeException)
+        catch (Exception exception) when (exception is ArgumentException)
         {
             ConversionStatusText.Text = $"Не удалось сохранить пресет: {exception.Message}";
         }
