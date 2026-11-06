@@ -57,8 +57,8 @@ public partial class MainWindow : Window
             if (files.Length > 0)
             {
                 SetSelectedFile(files[0]);
-                if (files.Length > 1)
-                    EnqueueFiles(files, GetSelectedOutputFormat());
+                EnqueueFiles(files, GetSelectedOutputFormat());
+                RunQueue_OnClick(this, new RoutedEventArgs());
             }
         }
     }
