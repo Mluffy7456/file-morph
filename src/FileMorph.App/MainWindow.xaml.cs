@@ -130,7 +130,8 @@ public partial class MainWindow : Window
 
         var sourcePath = _selectedFilePath;
         var destinationPath = GetAvailableDestinationPath(sourcePath, outputFormat);
-        var request = new ConversionRequest(sourcePath, destinationPath, ConversionOperation.Convert, outputFormat, (int)QualitySlider.Value);
+        var request = new ConversionRequest(sourcePath, destinationPath, ConversionOperation.Convert, outputFormat, (int)QualitySlider.Value,
+            GetTargetDimension(TargetWidthTextBox), GetTargetDimension(TargetHeightTextBox));
         var progress = new Progress<double>(value =>
         {
             ConversionStatusText.Text = $"Выполняется конвертация… {value / 100d:P0}";
@@ -196,6 +197,15 @@ public partial class MainWindow : Window
         }
     }
 
+    private static int? GetTargetDimension(TextBox textBox)
+    {
+        if (string.IsNullOrWhiteSpace(textBox.Text))
+            return null;
+        if (!int.TryParse(textBox.Text.Trim(), out var value) || value is < 1 or > 20000)
+            throw new ArgumentException("Размер изображения должен быть целым числом от 1 до 20000 пикселей.");
+        return value;
+    }
+
     private string GetSelectedOutputFormat()
     {
         return OutputFormatComboBox.SelectedItem is ComboBoxItem { Tag: string format }
@@ -219,7 +229,8 @@ public partial class MainWindow : Window
             {
                 var destinationPath = GetAvailableDestinationPath(sourcePath, outputFormat, reservedPaths);
                 _queueService.Enqueue(new ConversionRequest(
-                    sourcePath, destinationPath, ConversionOperation.Convert, outputFormat, (int)QualitySlider.Value));
+                    sourcePath, destinationPath, ConversionOperation.Convert, outputFormat, (int)QualitySlider.Value,
+                    GetTargetDimension(TargetWidthTextBox), GetTargetDimension(TargetHeightTextBox)));
                 reservedPaths.Add(destinationPath);
                 addedCount++;
             }
