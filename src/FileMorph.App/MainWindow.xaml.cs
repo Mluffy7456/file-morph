@@ -197,7 +197,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private static int? GetTargetDimension(TextBox textBox)
+    private static int? GetTargetDimension(System.Windows.Controls.TextBox textBox)
     {
         if (string.IsNullOrWhiteSpace(textBox.Text))
             return null;
